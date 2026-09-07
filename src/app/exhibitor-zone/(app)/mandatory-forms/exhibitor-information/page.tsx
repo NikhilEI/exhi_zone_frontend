@@ -7,6 +7,7 @@ import { countries, findCountry } from "@/data/countries";
 
 const HALL_OPTIONS = ["Hall 1", "Hall 2", "Hall 3", "Hall 4", "Hall 5"];
 const BOOTH_TYPE_OPTIONS = ["Raw Space", "Shell Space"] as const;
+const BOOTH_LOCATION_OPTIONS = ["1 Side Open", "2 Side Open", "3 Side Open", "4 Side Open"] as const;
 const PROFILE_MAX_LENGTH = 400;
 
 interface ExistingInfo {
@@ -16,6 +17,10 @@ interface ExistingInfo {
   zone: string | null;
   booth_no: string | null;
   booth_type: string;
+  booth_size: string | number | null;
+  booth_width: string | number | null;
+  booth_depth: string | number | null;
+  booth_location: string | null;
   country: string;
   country_code: string;
   phone_no: string | null;
@@ -23,6 +28,10 @@ interface ExistingInfo {
   website: string | null;
   company_profile: string;
   company_logo_document_id: number | null;
+  contact_name: string | null;
+  contact_designation: string | null;
+  contact_phone: string | null;
+  contact_alternate_email: string | null;
 }
 
 interface FormState {
@@ -32,12 +41,20 @@ interface FormState {
   zone: string;
   boothNo: string;
   boothType: string;
+  boothSize: string;
+  boothWidth: string;
+  boothDepth: string;
+  boothLocation: string;
   country: string;
   countryCode: string;
   phoneNo: string;
   email: string;
   website: string;
   companyProfile: string;
+  contactName: string;
+  contactDesignation: string;
+  contactPhone: string;
+  contactAlternateEmail: string;
 }
 
 const initialForm: FormState = {
@@ -47,12 +64,20 @@ const initialForm: FormState = {
   zone: "",
   boothNo: "",
   boothType: "",
+  boothSize: "",
+  boothWidth: "",
+  boothDepth: "",
+  boothLocation: "",
   country: "",
   countryCode: "",
   phoneNo: "",
   email: "",
   website: "",
-  companyProfile: ""
+  companyProfile: "",
+  contactName: "",
+  contactDesignation: "",
+  contactPhone: "",
+  contactAlternateEmail: ""
 };
 
 export default function ExhibitorInformationPage() {
@@ -82,12 +107,20 @@ export default function ExhibitorInformationPage() {
             zone: body.info.zone || "",
             boothNo: body.info.booth_no || "",
             boothType: body.info.booth_type || "",
+            boothSize: body.info.booth_size != null ? String(body.info.booth_size) : "",
+            boothWidth: body.info.booth_width != null ? String(body.info.booth_width) : "",
+            boothDepth: body.info.booth_depth != null ? String(body.info.booth_depth) : "",
+            boothLocation: body.info.booth_location || "",
             country: body.info.country || "",
             countryCode: body.info.country_code || "",
             phoneNo: body.info.phone_no || "",
             email: body.info.email || "",
             website: body.info.website || "",
-            companyProfile: body.info.company_profile || ""
+            companyProfile: body.info.company_profile || "",
+            contactName: body.info.contact_name || "",
+            contactDesignation: body.info.contact_designation || "",
+            contactPhone: body.info.contact_phone || "",
+            contactAlternateEmail: body.info.contact_alternate_email || ""
           });
           if (body.info.company_logo_document_id) {
             setLogoDocumentId(body.info.company_logo_document_id);
@@ -164,6 +197,7 @@ export default function ExhibitorInformationPage() {
     if (!form.companyProfile.trim()) next.companyProfile = "Company Profile is required.";
     else if (form.companyProfile.length > PROFILE_MAX_LENGTH) next.companyProfile = `Company Profile must be ${PROFILE_MAX_LENGTH} characters or fewer.`;
     if (!logoDocumentId) next.companyLogo = "Please upload your company logo.";
+    if (form.contactAlternateEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contactAlternateEmail.trim())) next.contactAlternateEmail = "Please enter a valid email address.";
     return next;
   }
 
@@ -185,13 +219,21 @@ export default function ExhibitorInformationPage() {
         zone: form.zone.trim() || undefined,
         boothNo: form.boothNo.trim() || undefined,
         boothType: form.boothType,
+        boothSize: form.boothSize.trim() ? Number(form.boothSize) : undefined,
+        boothWidth: form.boothWidth.trim() ? Number(form.boothWidth) : undefined,
+        boothDepth: form.boothDepth.trim() ? Number(form.boothDepth) : undefined,
+        boothLocation: form.boothLocation || undefined,
         country: form.country,
         countryCode: form.countryCode,
         phoneNo: form.phoneNo.trim() || undefined,
         email: form.email.trim(),
         website: form.website.trim() || undefined,
         companyProfile: form.companyProfile.trim(),
-        companyLogoDocumentId: logoDocumentId
+        companyLogoDocumentId: logoDocumentId,
+        contactName: form.contactName.trim() || undefined,
+        contactDesignation: form.contactDesignation.trim() || undefined,
+        contactPhone: form.contactPhone.trim() || undefined,
+        contactAlternateEmail: form.contactAlternateEmail.trim() || undefined
       });
       setDone(true);
     } catch (err) {
@@ -244,12 +286,12 @@ export default function ExhibitorInformationPage() {
 
       {apiError && <div className="alert alert-danger mb-3">{apiError}</div>}
 
-      <div className="card">
-        <div className="card-header">
-          <span className="card-title">Company Information to be printed in the Show Directory</span>
-        </div>
-        <div className="card-body">
-          <form noValidate onSubmit={handleSubmit}>
+      <form noValidate onSubmit={handleSubmit}>
+        <div className="card">
+          <div className="card-header">
+            <span className="card-title">Company Information to be printed in the Show Directory</span>
+          </div>
+          <div className="card-body">
             <p className="text-xs fw-600" style={{ textTransform: "uppercase", color: "var(--ez-muted)", letterSpacing: "0.04em", marginBottom: "0.75rem" }}>
               Company Information
             </p>
@@ -312,6 +354,59 @@ export default function ExhibitorInformationPage() {
                   ))}
                 </select>
                 {errors.boothType && <div className="invalid-feedback d-block">{errors.boothType}</div>}
+              </div>
+            </div>
+
+            <div className="grid grid-2">
+              <div className="form-group">
+                <label className="form-label">Booth Size (sq. m)</label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  className="form-control"
+                  value={form.boothSize}
+                  onChange={(e) => setField("boothSize", e.target.value)}
+                  placeholder="e.g. 15"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Booth Location</label>
+                <select className="form-control form-select" value={form.boothLocation} onChange={(e) => setField("boothLocation", e.target.value)}>
+                  <option value="">Select Booth Location</option>
+                  {BOOTH_LOCATION_OPTIONS.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-2">
+              <div className="form-group">
+                <label className="form-label">Booth Dimensions - Width (m)</label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  className="form-control"
+                  value={form.boothWidth}
+                  onChange={(e) => setField("boothWidth", e.target.value)}
+                  placeholder="e.g. 3"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Booth Dimensions - Depth (m)</label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  className="form-control"
+                  value={form.boothDepth}
+                  onChange={(e) => setField("boothDepth", e.target.value)}
+                  placeholder="e.g. 5"
+                />
               </div>
             </div>
 
@@ -410,16 +505,56 @@ export default function ExhibitorInformationPage() {
               {errors.companyLogo && <div className="invalid-feedback d-block">{errors.companyLogo}</div>}
               <p className="text-xs text-muted mt-1">Accepted formats: PDF, JPEG/JPG, AI.</p>
             </div>
-
-            <div className="d-flex justify-between align-center" style={{ flexWrap: "wrap", gap: "1rem", marginTop: "1rem" }}>
-              <span className="text-xs text-muted">Note: * fields are mandatory</span>
-              <button type="submit" className="btn btn-primary" disabled={submitting || logoUploading}>
-                {submitting ? "Saving..." : "Submit"}
-              </button>
-            </div>
-          </form>
+          </div>
         </div>
-      </div>
+
+        <div className="card mt-3">
+          <div className="card-header">
+            <span className="card-title">Contact Information</span>
+          </div>
+          <div className="card-body">
+            <div className="grid grid-2">
+              <div className="form-group">
+                <label className="form-label">Name</label>
+                <input className="form-control" value={form.contactName} onChange={(e) => setField("contactName", e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Designation</label>
+                <input className="form-control" value={form.contactDesignation} onChange={(e) => setField("contactDesignation", e.target.value)} />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Phone</label>
+              <input
+                type="tel"
+                className="form-control"
+                maxLength={10}
+                value={form.contactPhone}
+                onChange={(e) => setField("contactPhone", e.target.value.replace(/[^0-9]/g, "").slice(0, 10))}
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Alternate Email</label>
+              <input
+                type="email"
+                className={`form-control ${errors.contactAlternateEmail ? "is-invalid" : ""}`}
+                value={form.contactAlternateEmail}
+                onChange={(e) => setField("contactAlternateEmail", e.target.value)}
+              />
+              {errors.contactAlternateEmail && <div className="invalid-feedback d-block">{errors.contactAlternateEmail}</div>}
+            </div>
+          </div>
+        </div>
+
+        <div className="d-flex justify-between align-center" style={{ flexWrap: "wrap", gap: "1rem", marginTop: "1rem" }}>
+          <span className="text-xs text-muted">Note: * fields are mandatory</span>
+          <button type="submit" className="btn btn-primary" disabled={submitting || logoUploading}>
+            {submitting ? "Saving..." : "Submit"}
+          </button>
+        </div>
+      </form>
     </>
   );
 }
