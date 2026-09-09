@@ -57,10 +57,21 @@ interface Document {
   is_verified: number;
 }
 
+interface BadgeRecord {
+  id: number;
+  full_name: string;
+  designation: string;
+  company_name: string;
+  country: string;
+  mobile_no: string;
+  email: string;
+}
+
 export default function AdminCompanyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [badges, setBadges] = useState<BadgeRecord[]>([]);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [editing, setEditing] = useState(false);
@@ -76,6 +87,11 @@ export default function AdminCompanyDetailPage({ params }: { params: Promise<{ i
       })
       .then((body) => setDocuments(body.documents))
       .catch((err) => setError(err instanceof ApiError ? err.message : "Failed to load company."));
+
+    api
+      .get<{ records: BadgeRecord[] }>(`/mandatory-forms/badges-for-exhibitors/admin/${id}`)
+      .then((body) => setBadges(body.records))
+      .catch(() => {});
   }
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -256,6 +272,46 @@ export default function AdminCompanyDetailPage({ params }: { params: Promise<{ i
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {profile && (
+        <div className="card mb-3">
+          <div className="card-header">
+            <span className="card-title">Badges for Exhibitors</span>
+          </div>
+          {badges.length === 0 ? (
+            <div className="card-body">
+              <p className="text-muted text-small mb-0">No badges added yet.</p>
+            </div>
+          ) : (
+            <div className="table-wrapper">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Company Name</th>
+                    <th>Designation</th>
+                    <th>Email</th>
+                    <th>Phone No</th>
+                    <th>Country</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {badges.map((b) => (
+                    <tr key={b.id}>
+                      <td>{b.full_name}</td>
+                      <td>{b.company_name}</td>
+                      <td>{b.designation}</td>
+                      <td>{b.email}</td>
+                      <td>{b.mobile_no}</td>
+                      <td>{b.country}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 

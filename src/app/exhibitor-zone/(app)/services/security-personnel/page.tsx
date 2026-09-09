@@ -3,6 +3,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "../../../_lib/apiClient";
+import ServiceGate from "../../../_components/ServiceGate";
 
 const PERSONNEL_OPTIONS = [
   { value: "Security Guard", inr: 2000, usd: 40 },
@@ -111,7 +112,7 @@ export default function SecurityPersonnelPage() {
   }
 
   return (
-    <>
+    <ServiceGate slug="security-personnel">
       <div className="content-header">
         <h1 className="content-title">Security Personnel</h1>
         <p className="content-subtitle">
@@ -235,6 +236,6 @@ export default function SecurityPersonnelPage() {
           </form>
         </div>
       </div>
-    </>
+    </ServiceGate>
   );
 }

@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "../../../_lib/apiClient";
+import ServiceGate from "../../../_components/ServiceGate";
 
 interface TranslatorRow {
   role: string;
@@ -92,7 +93,7 @@ export default function TranslatorsPage() {
   }
 
   return (
-    <>
+    <ServiceGate slug="translators">
       <div className="content-header">
         <h1 className="content-title">Translators</h1>
         <p className="content-subtitle">
@@ -168,6 +169,6 @@ export default function TranslatorsPage() {
           </form>
         </div>
       </div>
-    </>
+    </ServiceGate>
   );
 }

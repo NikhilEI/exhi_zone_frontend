@@ -51,6 +51,7 @@ const ADMIN_NAV: NavItem[] = [
   { label: "Access & Compliance" },
   { label: "Pass Management", href: "/exhibitor-zone/admin/passes", icon: "bx-id-card" },
   { label: "Mandatory Forms", href: "/exhibitor-zone/admin/mandatory-forms", icon: "bx-list-check" },
+  { label: "Additional Requirements", href: "/exhibitor-zone/admin/services", icon: "bx-toggle-left" },
   { label: "Form Reviews", href: "/exhibitor-zone/admin/forms", icon: "bx-list-check" },
   { label: "Communication" },
   { label: "Send Notification", href: "/exhibitor-zone/admin/notifications", icon: "bx-bell" },
@@ -65,6 +66,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const [mandatoryPendingCount, setMandatoryPendingCount] = useState(0);
+  const [activeServiceSlugs, setActiveServiceSlugs] = useState<Set<string> | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -81,6 +83,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     api
       .get<{ forms: { status: string }[] }>("/mandatory-forms")
       .then((body) => setMandatoryPendingCount(body.forms.filter((f) => f.status !== "completed").length))
+      .catch(() => {});
+    api
+      .get<{ additional: { slug: string }[] }>("/forms/templates")
+      .then((body) => setActiveServiceSlugs(new Set(body.additional.map((t) => t.slug))))
       .catch(() => {});
   }, [user]);
 
@@ -101,11 +107,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   const admin = isAdminTier(user.role);
-  const navItems = (admin ? ADMIN_NAV : EXHIBITOR_NAV).map((item) => {
-    if (item.label === "My Cart" && item.href) return { ...item, badge: cartCount };
-    if (item.label === "Mandatory Forms" && item.href) return { ...item, badge: mandatoryPendingCount };
-    return item;
-  });
+  const navItems = (admin ? ADMIN_NAV : EXHIBITOR_NAV)
+    .filter((item) => {
+      if (admin || !item.href || !activeServiceSlugs) return true;
+      const match = item.href.match(/^\/exhibitor-zone\/services\/([^/]+)$/);
+      return !match || activeServiceSlugs.has(match[1]);
+    })
+    .map((item) => {
+      if (item.label === "My Cart" && item.href) return { ...item, badge: cartCount };
+      if (item.label === "Mandatory Forms" && item.href) return { ...item, badge: mandatoryPendingCount };
+      return item;
+    });
 
   return (
     <div className="layout-wrapper">

@@ -3,6 +3,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "../../../_lib/apiClient";
+import ServiceGate from "../../../_components/ServiceGate";
 
 const PRICE_PER_KW_INR = 5000;
 const PRICE_PER_KW_USD = 125;
@@ -61,7 +62,7 @@ export default function AdditionalPowerSupplyPage() {
   }
 
   return (
-    <>
+    <ServiceGate slug="additional-power-supply">
       <div className="content-header">
         <h1 className="content-title">Additional Power Supply</h1>
         <p className="content-subtitle">
@@ -137,6 +138,6 @@ export default function AdditionalPowerSupplyPage() {
           </form>
         </div>
       </div>
-    </>
+    </ServiceGate>
   );
 }

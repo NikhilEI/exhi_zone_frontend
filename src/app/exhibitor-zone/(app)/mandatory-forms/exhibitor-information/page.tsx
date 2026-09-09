@@ -235,7 +235,11 @@ export default function ExhibitorInformationPage() {
         contactPhone: form.contactPhone.trim() || undefined,
         contactAlternateEmail: form.contactAlternateEmail.trim() || undefined
       });
-      setDone(true);
+      if (form.boothType === "Raw Space") {
+        router.push("/exhibitor-zone/mandatory-forms/booth-design-submission");
+      } else {
+        setDone(true);
+      }
     } catch (err) {
       setApiError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
     } finally {
@@ -536,7 +540,7 @@ export default function ExhibitorInformationPage() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Alternate Email</label>
+              <label className="form-label">Contact Email</label>
               <input
                 type="email"
                 className={`form-control ${errors.contactAlternateEmail ? "is-invalid" : ""}`}

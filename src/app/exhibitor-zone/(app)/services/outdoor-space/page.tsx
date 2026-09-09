@@ -3,6 +3,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "../../../_lib/apiClient";
+import ServiceGate from "../../../_components/ServiceGate";
 
 const PRICE_PER_SQM_INR = 5500;
 const PRICE_PER_SQM_USD = 110;
@@ -61,7 +62,7 @@ export default function OutdoorSpacePage() {
   }
 
   return (
-    <>
+    <ServiceGate slug="outdoor-space">
       <div className="content-header">
         <h1 className="content-title">Outdoor Space</h1>
         <p className="content-subtitle">Request additional outdoor space adjoining your stand.</p>
@@ -125,6 +126,6 @@ export default function OutdoorSpacePage() {
           </form>
         </div>
       </div>
-    </>
+    </ServiceGate>
   );
 }
