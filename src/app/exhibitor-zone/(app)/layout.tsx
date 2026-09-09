@@ -54,6 +54,7 @@ const ADMIN_NAV: NavItem[] = [
   { label: "Mandatory Forms", href: "/exhibitor-zone/admin/mandatory-forms", icon: "bx-list-check" },
   { label: "Additional Requirements", href: "/exhibitor-zone/admin/services", icon: "bx-toggle-left" },
   { label: "Form Reviews", href: "/exhibitor-zone/admin/forms", icon: "bx-list-check" },
+  { label: "Exhibitor Documents", href: "/exhibitor-zone/admin/documents", icon: "bx-upload" },
   { label: "Communication" },
   { label: "Send Notification", href: "/exhibitor-zone/admin/notifications", icon: "bx-bell" },
   { label: "Admin" },

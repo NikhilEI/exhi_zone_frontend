@@ -251,6 +251,9 @@ export default function AdminCompanyDetailPage({ params }: { params: Promise<{ i
           <div className="card">
             <div className="card-header">
               <span className="card-title">Documents</span>
+              <Link href={`/exhibitor-zone/admin/documents?exhibitorProfileId=${id}`} className="btn btn-sm btn-outline-primary">
+                <i className="bx bx-upload" /> Upload
+              </Link>
             </div>
             {documents.length === 0 ? (
               <div className="card-body">
