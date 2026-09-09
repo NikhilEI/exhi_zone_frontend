@@ -237,6 +237,8 @@ export default function ExhibitorInformationPage() {
       });
       if (form.boothType === "Raw Space") {
         router.push("/exhibitor-zone/mandatory-forms/booth-design-submission");
+      } else if (form.boothType === "Shell Space") {
+        router.push("/exhibitor-zone/mandatory-forms/fascia-name-submission");
       } else {
         setDone(true);
       }

@@ -59,6 +59,7 @@ interface Document {
 
 interface BadgeRecord {
   id: number;
+  badge_id: string | null;
   full_name: string;
   designation: string;
   company_name: string;
@@ -289,6 +290,7 @@ export default function AdminCompanyDetailPage({ params }: { params: Promise<{ i
               <table className="table">
                 <thead>
                   <tr>
+                    <th>Badge ID</th>
                     <th>Name</th>
                     <th>Company Name</th>
                     <th>Designation</th>
@@ -300,6 +302,9 @@ export default function AdminCompanyDetailPage({ params }: { params: Promise<{ i
                 <tbody>
                   {badges.map((b) => (
                     <tr key={b.id}>
+                      <td>
+                        <code className="text-xs">{b.badge_id || "—"}</code>
+                      </td>
                       <td>{b.full_name}</td>
                       <td>{b.company_name}</td>
                       <td>{b.designation}</td>

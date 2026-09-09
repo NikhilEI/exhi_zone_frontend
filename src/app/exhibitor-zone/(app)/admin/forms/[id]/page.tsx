@@ -103,6 +103,47 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
   );
 }
 
+// Templates with their own curated "Field / Information" review layout and a
+// simplified Approve / Changes Required decision flow (comments only required
+// for Changes Required). Any template not listed here falls back to the
+// generic key-value data dump with the original Approve/Request Changes/Reject
+// actions further below.
+const CURATED_TEMPLATES: Record<string, { title: string; fields: (s: Submission) => { label: string; value: React.ReactNode }[] }> = {
+  "booth-design-submission": {
+    title: "Design Review",
+    fields: (s) => [
+      { label: "Exhibitor", value: s.company_name },
+      { label: "Hall", value: s.hall_no || "—" },
+      { label: "Booth No.", value: s.booth_no || "—" },
+      { label: "Booth Area", value: s.booth_size ? `${s.booth_size} sqm` : "—" },
+      { label: "Contractor", value: (s.data.standContractor as string) || "—" },
+      { label: "Design Version", value: `V${s.version}` },
+      { label: "Submitted On", value: formatDate(s.created_at) },
+      { label: "Status", value: <StatusBadge status={s.status} /> },
+      { label: "Design File", value: s.data.designDocumentId ? renderValue(s.data.designDocumentId, "designDocumentId") : "—" },
+      { label: "Reviewer", value: s.reviewer_name || "—" },
+      { label: "Review Date", value: s.reviewed_at ? formatDate(s.reviewed_at) : "—" },
+      { label: "Comments", value: s.reviewer_notes || "—" }
+    ]
+  },
+  "fascia-name-submission": {
+    title: "Fascia Review",
+    fields: (s) => [
+      { label: "Exhibitor", value: s.company_name },
+      { label: "Hall", value: s.hall_no || "—" },
+      { label: "Booth No.", value: s.booth_no || "—" },
+      { label: "Booth Area", value: s.booth_size ? `${s.booth_size} sqm` : "—" },
+      { label: "Fascia Name", value: (s.data.fasciaName as string) || "—" },
+      { label: "Version", value: `V${s.version}` },
+      { label: "Submitted On", value: formatDate(s.created_at) },
+      { label: "Status", value: <StatusBadge status={s.status} /> },
+      { label: "Reviewer", value: s.reviewer_name || "—" },
+      { label: "Review Date", value: s.reviewed_at ? formatDate(s.reviewed_at) : "—" },
+      { label: "Comments", value: s.reviewer_notes || "—" }
+    ]
+  }
+};
+
 export default function AdminFormReviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -131,39 +172,29 @@ export default function AdminFormReviewPage({ params }: { params: Promise<{ id: 
     }
   }
 
-  const isBoothDesign = submission?.template_slug === "booth-design-submission";
-  const designDocumentId = submission?.data.designDocumentId;
+  const curated = submission ? CURATED_TEMPLATES[submission.template_slug] : undefined;
 
   return (
     <>
       <div className="content-header">
-        <h1 className="content-title">{isBoothDesign ? "Design Review" : submission?.template_name || "…"}</h1>
+        <h1 className="content-title">{curated?.title || submission?.template_name || "…"}</h1>
         <p className="content-subtitle">Review submitted form data and record a decision</p>
       </div>
 
       {error && <div className="alert alert-danger mb-3">{error}</div>}
 
-      {submission && isBoothDesign && (
+      {submission && curated && (
         <div className="grid mb-3" style={{ gridTemplateColumns: "2fr 1fr", alignItems: "start" }}>
           <div className="card">
             <div className="card-header">
-              <span className="card-title">Design Review</span>
+              <span className="card-title">{curated.title}</span>
             </div>
             <div className="card-body">
-              <FieldRow label="Exhibitor">{submission.company_name}</FieldRow>
-              <FieldRow label="Hall">{submission.hall_no || "—"}</FieldRow>
-              <FieldRow label="Booth No.">{submission.booth_no || "—"}</FieldRow>
-              <FieldRow label="Booth Area">{submission.booth_size ? `${submission.booth_size} sqm` : "—"}</FieldRow>
-              <FieldRow label="Contractor">{(submission.data.standContractor as string) || "—"}</FieldRow>
-              <FieldRow label="Design Version">V{submission.version}</FieldRow>
-              <FieldRow label="Submitted On">{formatDate(submission.created_at)}</FieldRow>
-              <FieldRow label="Status">
-                <StatusBadge status={submission.status} />
-              </FieldRow>
-              <FieldRow label="Design File">{designDocumentId ? renderValue(designDocumentId, "designDocumentId") : "—"}</FieldRow>
-              <FieldRow label="Reviewer">{submission.reviewer_name || "—"}</FieldRow>
-              <FieldRow label="Review Date">{submission.reviewed_at ? formatDate(submission.reviewed_at) : "—"}</FieldRow>
-              <FieldRow label="Comments">{submission.reviewer_notes || "—"}</FieldRow>
+              {curated.fields(submission).map((f) => (
+                <FieldRow key={f.label} label={f.label}>
+                  {f.value}
+                </FieldRow>
+              ))}
             </div>
           </div>
 
@@ -208,7 +239,7 @@ export default function AdminFormReviewPage({ params }: { params: Promise<{ id: 
         </div>
       )}
 
-      {submission && !isBoothDesign && (
+      {submission && !curated && (
         <div className="grid mb-3" style={{ gridTemplateColumns: "2fr 1fr", alignItems: "start" }}>
           <div className="card">
             <div className="card-header">

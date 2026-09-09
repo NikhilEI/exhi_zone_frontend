@@ -41,10 +41,6 @@ const EMPANELLED_CONTRACTORS_URL = "https://www.convergenceindia.org/empanelled-
 const DECLARATION_TEXT =
   "I confirm that the submitted booth design complies with the exhibition's technical guidelines, venue regulations and applicable terms & conditions. I understand that the design is subject to approval by the Organiser and that any changes communicated during the review process will be incorporated before execution.";
 
-// A submission is only editable/resubmittable in these statuses — matches
-// EDITABLE_STATUSES in backend/src/routes/exhibitorZone/forms.js.
-const EDITABLE_STATUSES = ["draft", "needs_info", "rejected", "changes_requested"];
-
 interface Submission {
   id: number;
   template_slug: string;
@@ -71,7 +67,7 @@ export default function BoothDesignSubmissionPage() {
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState<Submission | null>(null);
+  const [savedMessage, setSavedMessage] = useState("");
 
   const [showDeclaration, setShowDeclaration] = useState(false);
   const [declarationChecked, setDeclarationChecked] = useState(false);
@@ -157,6 +153,7 @@ export default function BoothDesignSubmissionPage() {
 
   function handleContinue() {
     setApiError("");
+    setSavedMessage("");
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
@@ -179,8 +176,9 @@ export default function BoothDesignSubmissionPage() {
 
       const body = await api.get<{ submissions: Submission[] }>("/forms/submissions");
       const saved = body.submissions.find((s) => s.template_slug === "booth-design-submission") || null;
+      setExisting(saved);
       setShowDeclaration(false);
-      setDone(saved);
+      setSavedMessage(saved ? `Saved — Version v${saved.version} submitted on ${formatDate(saved.created_at)}.` : "Saved.");
     } catch (err) {
       setApiError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
     } finally {
@@ -211,33 +209,6 @@ export default function BoothDesignSubmissionPage() {
     );
   }
 
-  const finalSubmission = done || (existing && !EDITABLE_STATUSES.includes(existing.status) ? existing : null);
-
-  if (finalSubmission) {
-    return (
-      <div className="card text-center" style={{ maxWidth: 520, margin: "3rem auto", padding: "1rem" }}>
-        <div className="card-body" style={{ padding: "2.5rem 1.5rem" }}>
-          <i className="bx bx-check-circle" style={{ fontSize: "3rem", color: "var(--ez-success)" }} />
-          <h3 style={{ marginTop: "1rem", marginBottom: "0.5rem", color: "var(--ez-dark)" }}>Booth Design Submission recorded</h3>
-          <div className="d-flex justify-between align-center" style={{ margin: "1rem 0", padding: "0.75rem 1rem", background: "var(--ez-bg-body)", borderRadius: "var(--ez-border-radius)" }}>
-            <span className="text-small text-muted">Status</span>
-            <StatusBadge status={finalSubmission.status} />
-          </div>
-          <p className="text-muted text-small mb-1">
-            Version v{finalSubmission.version} submitted on {formatDate(finalSubmission.created_at)}
-          </p>
-          {finalSubmission.reviewer_notes && <p className="text-muted text-small mb-4">Reviewer comment: {finalSubmission.reviewer_notes}</p>}
-          <button type="button" className="btn btn-primary w-100 mt-3" onClick={() => router.push("/exhibitor-zone/mandatory-forms")}>
-            Back to Mandatory Forms
-          </button>
-          <button type="button" className="btn btn-ghost w-100 mt-2" onClick={() => router.push("/exhibitor-zone/forms/submissions")}>
-            View My Submissions
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <>
       <div className="content-header">
@@ -250,15 +221,29 @@ export default function BoothDesignSubmissionPage() {
         <span className="text-small">Important: Please ensure all booth artwork and design files follow the exhibition guidelines before submission.</span>
       </div>
 
-      {existing && existing.status === "changes_requested" && (
-        <div className="alert alert-warning mb-3">
-          <i className="bx bx-message-square-edit" />
-          <span className="text-small">
-            <strong>Changes requested by the reviewer:</strong> {existing.reviewer_notes || "Please review and resubmit."}
-          </span>
+      {existing && (
+        <div className="card mb-3" style={{ padding: "1rem 1.25rem" }}>
+          <div className="d-flex justify-between align-center" style={{ flexWrap: "wrap", gap: "0.75rem" }}>
+            <div>
+              <span className="text-small fw-600" style={{ color: "var(--ez-dark)" }}>
+                Current submission
+              </span>
+              <div className="text-xs text-muted mt-1">
+                Version v{existing.version} · Submitted {formatDate(existing.created_at)}
+              </div>
+            </div>
+            <StatusBadge status={existing.status} />
+          </div>
+          {existing.reviewer_notes && (
+            <p className="text-small text-muted mt-2 mb-0">
+              <strong>Reviewer comment:</strong> {existing.reviewer_notes}
+            </p>
+          )}
+          <p className="text-xs text-muted mt-2 mb-0">Editing and resubmitting below will send it back for re-review.</p>
         </div>
       )}
 
+      {savedMessage && <div className="alert alert-success mb-3">{savedMessage}</div>}
       {apiError && <div className="alert alert-danger mb-3">{apiError}</div>}
 
       <div className="card">

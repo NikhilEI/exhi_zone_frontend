@@ -23,6 +23,7 @@ const EXHIBITOR_NAV: NavItem[] = [
   { label: "Security Personnel", href: "/exhibitor-zone/services/security-personnel", icon: "bx-shield" },
   { label: "Additional Power Supply", href: "/exhibitor-zone/services/additional-power-supply", icon: "bx-bolt-circle" },
   { label: "Outdoor Space", href: "/exhibitor-zone/services/outdoor-space", icon: "bx-move" },
+  { label: "Internet Connectivity", href: "/exhibitor-zone/services/internet-connectivity", icon: "bx-wifi" },
   { label: "Compliance" },
   { label: "Forms", href: "/exhibitor-zone/forms", icon: "bx-list-check" },
   { label: "Documents", href: "/exhibitor-zone/documents", icon: "bx-folder" },
@@ -111,7 +112,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     .filter((item) => {
       if (admin || !item.href || !activeServiceSlugs) return true;
       const match = item.href.match(/^\/exhibitor-zone\/services\/([^/]+)$/);
-      return !match || activeServiceSlugs.has(match[1]);
+      // Only slugs with a form_templates row participate in the admin
+      // enable/disable toggle — "internet-connectivity" is a static contact
+      // page with no backing template, so it's always shown.
+      if (!match || match[1] === "internet-connectivity") return true;
+      return activeServiceSlugs.has(match[1]);
     })
     .map((item) => {
       if (item.label === "My Cart" && item.href) return { ...item, badge: cartCount };

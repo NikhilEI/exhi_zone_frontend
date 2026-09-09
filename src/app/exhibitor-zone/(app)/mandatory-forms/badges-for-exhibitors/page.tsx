@@ -7,6 +7,7 @@ import { countries, findCountry } from "@/data/countries";
 
 interface BadgeRecord {
   id: number;
+  badge_id: string | null;
   full_name: string;
   designation: string;
   company_name: string;
@@ -37,8 +38,8 @@ const initialForm: FormState = {
 };
 
 function downloadCsv(records: BadgeRecord[]) {
-  const header = ["Name", "Company Name", "Designation", "Email", "Phone No", "Country"];
-  const rows = records.map((r) => [r.full_name, r.company_name, r.designation, r.email, r.mobile_no, r.country]);
+  const header = ["Badge ID", "Name", "Company Name", "Designation", "Email", "Phone No", "Country"];
+  const rows = records.map((r) => [r.badge_id || "", r.full_name, r.company_name, r.designation, r.email, r.mobile_no, r.country]);
   const csv = [header, ...rows]
     .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
     .join("\r\n");
@@ -189,7 +190,7 @@ export default function BadgesForExhibitorsPage() {
               <table className="table">
                 <thead>
                   <tr>
-                    <th>#</th>
+                    <th>Badge ID</th>
                     <th>Name</th>
                     <th>Company Name</th>
                     <th>Designation</th>
@@ -200,9 +201,11 @@ export default function BadgesForExhibitorsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {records.map((r, i) => (
+                  {records.map((r) => (
                     <tr key={r.id}>
-                      <td>{i + 1}</td>
+                      <td>
+                        <code className="text-xs">{r.badge_id || "—"}</code>
+                      </td>
                       <td>{r.full_name}</td>
                       <td>{r.company_name}</td>
                       <td>{r.designation}</td>
