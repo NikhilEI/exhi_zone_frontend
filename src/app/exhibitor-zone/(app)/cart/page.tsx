@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "../../_lib/apiClient";
 import { formatCurrency } from "../../_lib/format";
+import { payForOrder } from "../../_lib/razorpay";
 
 interface CartItem {
   id: number;
@@ -59,7 +60,13 @@ export default function CartPage() {
     setError("");
     try {
       const result = await api.post<{ orderId: number }>("/cart/checkout");
-      router.push(`/exhibitor-zone/orders/${result.orderId}`);
+      // Order is created (unpaid) either way — go straight into the Razorpay
+      // payment flow for it. If the gateway isn't reachable/configured or the
+      // exhibitor cancels, they still land on the order page where "Pay Now"
+      // lets them retry, so nothing is lost.
+      await payForOrder(result.orderId, (paid) => {
+        router.push(paid ? `/exhibitor-zone/orders/${result.orderId}/success` : `/exhibitor-zone/orders/${result.orderId}`);
+      });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Checkout failed.");
       setCheckingOut(false);

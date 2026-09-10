@@ -2,8 +2,10 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { api, ApiError } from "../../../_lib/apiClient";
 import { formatCurrency, formatDate } from "../../../_lib/format";
+import { payForOrder } from "../../../_lib/razorpay";
 import StatusBadge from "../../../_components/StatusBadge";
 
 interface OrderItem {
@@ -32,15 +34,27 @@ interface OrderDetail {
 
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
   const [data, setData] = useState<OrderDetail | null>(null);
   const [error, setError] = useState("");
+  const [paying, setPaying] = useState(false);
 
-  useEffect(() => {
+  function load() {
     api
       .get<OrderDetail>(`/orders/${id}`)
       .then(setData)
       .catch((err) => setError(err instanceof ApiError ? err.message : "Failed to load order."));
-  }, [id]);
+  }
+
+  useEffect(load, [id]);
+
+  function handlePayNow() {
+    setPaying(true);
+    payForOrder(Number(id), (paid) => {
+      setPaying(false);
+      if (paid) router.push(`/exhibitor-zone/orders/${id}/success`);
+    });
+  }
 
   return (
     <>
@@ -119,6 +133,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 <p className="text-muted text-xs mt-2" style={{ margin: 0 }}>
                   Placed {formatDate(data.order.created_at)}
                 </p>
+                {(data.order.payment_status === "unpaid" || data.order.payment_status === "partially_paid") && (
+                  <button type="button" className="btn btn-primary w-100 mt-3" disabled={paying} onClick={handlePayNow}>
+                    {paying ? "Opening payment…" : "Pay Now"}
+                  </button>
+                )}
               </div>
             </div>
 

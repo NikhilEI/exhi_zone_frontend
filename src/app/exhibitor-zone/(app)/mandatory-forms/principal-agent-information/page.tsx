@@ -94,9 +94,6 @@ export default function PrincipalAgentInformationPage() {
     if (!form.countryCode) next.countryCode = "Please select a country.";
     if (!form.sectorSelection) next.sectorSelection = "Please select a sector.";
     if (isAddMore && !form.customSector.trim()) next.customSector = "Please specify the sector.";
-    if (form.website.trim() && !/^https?:\/\/.+/i.test(form.website.trim())) {
-      next.website = "Please enter a valid URL (starting with http:// or https://).";
-    }
     return next;
   }
 
@@ -295,7 +292,7 @@ export default function PrincipalAgentInformationPage() {
               <div className="grid grid-2">
                 <div className="form-group">
                   <label className="form-label">Website</label>
-                  <input className={`form-control ${errors.website ? "is-invalid" : ""}`} value={form.website} onChange={(e) => setField("website", e.target.value)} placeholder="https://example.com" />
+                  <input className={`form-control ${errors.website ? "is-invalid" : ""}`} value={form.website} onChange={(e) => setField("website", e.target.value)} placeholder="example.com" />
                   {errors.website && <div className="invalid-feedback d-block">{errors.website}</div>}
                 </div>
                 <div className="form-group">
