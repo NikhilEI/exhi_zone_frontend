@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api, ApiError } from "../../../_lib/apiClient";
 import { useSession } from "../../../_lib/SessionProvider";
+import DataTable, { type DataTableColumn } from "../../../_components/DataTable";
 
 interface AdminUser {
   id: number;
@@ -64,6 +65,17 @@ export default function AdminUsersPage() {
     return <div className="alert alert-warning">Only super admins can manage admin users.</div>;
   }
 
+  const columns: DataTableColumn<AdminUser>[] = [
+    { key: "name", label: "Name", value: (u) => `${u.first_name} ${u.last_name}`, render: (u) => `${u.first_name} ${u.last_name}` },
+    { key: "email", label: "Email" },
+    { key: "role", label: "Role", render: (u) => <span style={{ textTransform: "capitalize" }}>{u.role.replace(/_/g, " ")}</span> },
+    {
+      key: "is_active",
+      label: "Status",
+      render: (u) => (u.is_active ? <span className="badge badge-success">Active</span> : <span className="badge badge-secondary">Disabled</span>)
+    }
+  ];
+
   return (
     <>
       <div className="content-header">
@@ -115,52 +127,21 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      <div className="card">
-        <div className="card-header">
-          <span className="card-title">All Admin Users</span>
-        </div>
-        <div className="table-wrapper">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => (
-                <tr key={u.id}>
-                  <td className="fw-600" style={{ color: "var(--ez-dark)" }}>
-                    {u.first_name} {u.last_name}
-                  </td>
-                  <td className="text-small text-muted">{u.email}</td>
-                  <td className="text-small" style={{ textTransform: "capitalize" }}>
-                    {u.role.replace(/_/g, " ")}
-                  </td>
-                  <td>{u.is_active ? <span className="badge badge-success">Active</span> : <span className="badge badge-secondary">Disabled</span>}</td>
-                  <td>
-                    {u.id !== currentUser?.id && (
-                      <button type="button" className="btn btn-sm btn-ghost" onClick={() => toggleStatus(u)}>
-                        {u.is_active ? "Disable" : "Enable"}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {users.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="text-muted text-small" style={{ textAlign: "center", padding: "2rem" }}>
-                    No admin users found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <DataTable
+        title="All Admin Users"
+        columns={columns}
+        rows={users}
+        keyField={(u) => u.id}
+        searchPlaceholder="Search admin users…"
+        emptyMessage="No admin users found."
+        actions={(u) =>
+          u.id !== currentUser?.id ? (
+            <button type="button" className="btn btn-sm btn-ghost" onClick={() => toggleStatus(u)}>
+              {u.is_active ? "Disable" : "Enable"}
+            </button>
+          ) : null
+        }
+      />
     </>
   );
 }

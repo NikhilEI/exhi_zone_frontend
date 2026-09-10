@@ -20,6 +20,9 @@ interface DataTableProps<T> {
   emptyMessage?: string;
   actions?: (row: T) => React.ReactNode;
   loading?: boolean;
+  // Rows per page. Every list built on DataTable gets pagination for free;
+  // pass a larger number (or Infinity) for the rare list that shouldn't paginate.
+  pageSize?: number;
 }
 
 function getCellValue<T>(column: DataTableColumn<T>, row: T): string | number {
@@ -36,11 +39,13 @@ export default function DataTable<T>({
   searchPlaceholder = "Search…",
   emptyMessage = "No records found.",
   actions,
-  loading = false
+  loading = false,
+  pageSize = 20
 }: DataTableProps<T>) {
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return rows;
@@ -61,6 +66,13 @@ export default function DataTable<T>({
     });
   }, [filtered, sortKey, sortDir, columns]);
 
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  // Clamp rather than reset-via-effect: if a search/sort/data change shrinks
+  // the result set out from under the current page, this just settles on the
+  // new last page instead of needing a dedicated effect to watch for it.
+  const currentPage = Math.min(page, totalPages);
+  const pageRows = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage, pageSize]);
+
   function toggleSort(key: string) {
     if (sortKey === key) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -68,16 +80,25 @@ export default function DataTable<T>({
       setSortKey(key);
       setSortDir("asc");
     }
+    setPage(1);
   }
+
+  function handleSearchChange(value: string) {
+    setSearch(value);
+    setPage(1);
+  }
+
+  const rangeStart = sorted.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const rangeEnd = Math.min(currentPage * pageSize, sorted.length);
 
   return (
     <div className="card">
       <div className="card-header" style={{ flexWrap: "wrap", gap: "0.75rem" }}>
         {title ? <span className="card-title">{title}</span> : <span />}
         <div className="d-flex align-center gap-2" style={{ flexWrap: "wrap" }}>
-          <input type="search" className="form-control" placeholder={searchPlaceholder} style={{ maxWidth: 240 }} value={search} onChange={(e) => setSearch(e.target.value)} />
+          <input type="search" className="form-control" placeholder={searchPlaceholder} style={{ maxWidth: 240 }} value={search} onChange={(e) => handleSearchChange(e.target.value)} />
           <span className="text-small text-muted">
-            {sorted.length} of {rows.length}
+            {sorted.length > 0 ? `${rangeStart}–${rangeEnd} of ${sorted.length}` : `0 of ${rows.length}`}
           </span>
         </div>
       </div>
@@ -108,7 +129,7 @@ export default function DataTable<T>({
                 </td>
               </tr>
             ) : (
-              sorted.map((row) => (
+              pageRows.map((row) => (
                 <tr key={keyField(row)}>
                   {columns.map((col) => (
                     <td key={col.key}>{col.render ? col.render(row) : getCellValue(col, row)}</td>
@@ -120,6 +141,20 @@ export default function DataTable<T>({
           </tbody>
         </table>
       </div>
+
+      {!loading && totalPages > 1 && (
+        <div className="d-flex align-center justify-between" style={{ padding: "0.875rem 1.25rem", borderTop: "1px solid var(--ez-divider)", flexWrap: "wrap", gap: "0.5rem" }}>
+          <button type="button" className="btn btn-ghost btn-sm" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}>
+            <i className="bx bx-chevron-left" /> Prev
+          </button>
+          <span className="text-small text-muted">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button type="button" className="btn btn-ghost btn-sm" disabled={currentPage >= totalPages} onClick={() => setPage(currentPage + 1)}>
+            Next <i className="bx bx-chevron-right" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

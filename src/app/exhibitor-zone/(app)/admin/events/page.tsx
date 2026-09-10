@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api, ApiError } from "../../../_lib/apiClient";
 import { formatDate } from "../../../_lib/format";
 import StatusBadge from "../../../_components/StatusBadge";
+import DataTable, { type DataTableColumn } from "../../../_components/DataTable";
 
 interface Event {
   id: number;
@@ -46,6 +47,12 @@ export default function AdminEventsPage() {
       setCreating(false);
     }
   }
+
+  const eventColumns: DataTableColumn<Event>[] = [
+    { key: "name", label: "Name" },
+    { key: "start_date", label: "Dates", render: (e) => `${formatDate(e.start_date)} – ${formatDate(e.end_date)}` },
+    { key: "status", label: "Status", render: (e) => <StatusBadge status={e.status} /> }
+  ];
 
   return (
     <>
@@ -94,50 +101,19 @@ export default function AdminEventsPage() {
         </div>
       )}
 
-      <div className="card">
-        <div className="card-header">
-          <span className="card-title">All Events</span>
-        </div>
-        <div className="table-wrapper">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Dates</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {events.map((e) => (
-                <tr key={e.id}>
-                  <td className="fw-600" style={{ color: "var(--ez-dark)" }}>
-                    {e.name}
-                  </td>
-                  <td className="text-small text-muted">
-                    {formatDate(e.start_date)} – {formatDate(e.end_date)}
-                  </td>
-                  <td>
-                    <StatusBadge status={e.status} />
-                  </td>
-                  <td>
-                    <Link href={`/exhibitor-zone/admin/events/${e.id}`} className="btn btn-sm btn-ghost">
-                      Edit
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-              {events.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="text-muted text-small" style={{ textAlign: "center", padding: "2rem" }}>
-                    No events created yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <DataTable
+        title="All Events"
+        columns={eventColumns}
+        rows={events}
+        keyField={(e) => e.id}
+        searchPlaceholder="Search events…"
+        emptyMessage="No events created yet."
+        actions={(e) => (
+          <Link href={`/exhibitor-zone/admin/events/${e.id}`} className="btn btn-sm btn-ghost">
+            Edit
+          </Link>
+        )}
+      />
     </>
   );
 }

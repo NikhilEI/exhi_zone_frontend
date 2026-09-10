@@ -16,7 +16,7 @@ interface ExistingInfo {
   hall_no: string | null;
   zone: string | null;
   booth_no: string | null;
-  booth_type: string;
+  booth_type: string | null;
   booth_size: string | number | null;
   booth_width: string | number | null;
   booth_depth: string | number | null;
@@ -24,9 +24,9 @@ interface ExistingInfo {
   country: string;
   country_code: string;
   phone_no: string | null;
-  email: string;
+  email: string | null;
   website: string | null;
-  company_profile: string;
+  company_profile: string | null;
   company_logo_document_id: number | null;
   contact_name: string | null;
   contact_designation: string | null;

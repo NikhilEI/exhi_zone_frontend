@@ -51,18 +51,18 @@ export default function LoginPage() {
       <form onSubmit={handleSubmit} id="loginForm" noValidate>
         <div className="form-group">
           <label className="form-label" htmlFor="email">
-            Email Address
+            Email or Username
           </label>
           <input
             id="email"
-            type="email"
+            type="text"
             className="form-control"
-            placeholder="you@company.com"
+            placeholder="you@company.com or username"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
             autoFocus
-            autoComplete="email"
+            autoComplete="username"
           />
         </div>
 

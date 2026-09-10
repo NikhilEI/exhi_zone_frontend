@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api, ApiError } from "../../../_lib/apiClient";
 import StatusBadge from "../../../_components/StatusBadge";
+import DataTable, { type DataTableColumn } from "../../../_components/DataTable";
 
 interface Stall {
   id: number;
@@ -75,6 +76,14 @@ export default function AdminStallsPage() {
     }
   }
 
+  const stallColumns: DataTableColumn<Stall>[] = [
+    { key: "stall_number", label: "Stall" },
+    { key: "hall", label: "Hall", render: (s) => s.hall || "—" },
+    { key: "area_sqm", label: "Area", value: (s) => Number(s.area_sqm) || 0, render: (s) => (s.area_sqm ? `${s.area_sqm} sqm` : "—") },
+    { key: "status", label: "Status", render: (s) => <StatusBadge status={s.status} /> },
+    { key: "allocated_to", label: "Allocated To", render: (s) => s.allocated_to || "—" }
+  ];
+
   return (
     <>
       <div className="content-header">
@@ -113,74 +122,43 @@ export default function AdminStallsPage() {
         </div>
       </div>
 
-      <div className="card">
-        <div className="card-header">
-          <span className="card-title">All Stalls</span>
-        </div>
-        <div className="table-wrapper">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Stall</th>
-                <th>Hall</th>
-                <th>Area</th>
-                <th>Status</th>
-                <th>Allocated To</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {stalls.map((s) => (
-                <tr key={s.id}>
-                  <td className="fw-600" style={{ color: "var(--ez-dark)" }}>
-                    {s.stall_number}
-                  </td>
-                  <td className="text-small text-muted">{s.hall || "—"}</td>
-                  <td className="text-small text-muted">{s.area_sqm ? `${s.area_sqm} sqm` : "—"}</td>
-                  <td>
-                    <StatusBadge status={s.status} />
-                  </td>
-                  <td className="text-small">{s.allocated_to || "—"}</td>
-                  <td>
-                    {s.status === "available" &&
-                      (allocateFor === s.id ? (
-                        <div className="d-flex gap-1 align-center">
-                          <select className="form-control form-select" style={{ minWidth: 160 }} value={selectedProfile} onChange={(e) => setSelectedProfile(Number(e.target.value))}>
-                            <option value="">Select exhibitor…</option>
-                            {profiles.map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.display_name}
-                              </option>
-                            ))}
-                          </select>
-                          <button type="button" className="btn btn-sm btn-primary" onClick={() => handleAllocate(s.id)}>
-                            Assign
-                          </button>
-                        </div>
-                      ) : (
-                        <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => setAllocateFor(s.id)}>
-                          Allocate
-                        </button>
-                      ))}
-                    {s.status === "booked" && s.allocation_id && (
-                      <button type="button" className="btn btn-sm btn-ghost" style={{ color: "var(--ez-danger)" }} onClick={() => handleRelease(s.allocation_id!)}>
-                        Release
-                      </button>
-                    )}
-                  </td>
-                </tr>
+      <DataTable
+        title="All Stalls"
+        columns={stallColumns}
+        rows={stalls}
+        keyField={(s) => s.id}
+        searchPlaceholder="Search stalls…"
+        emptyMessage="No stalls configured yet."
+        actions={(s) => (
+          <>
+            {s.status === "available" &&
+              (allocateFor === s.id ? (
+                <div className="d-flex gap-1 align-center">
+                  <select className="form-control form-select" style={{ minWidth: 160 }} value={selectedProfile} onChange={(e) => setSelectedProfile(Number(e.target.value))}>
+                    <option value="">Select exhibitor…</option>
+                    {profiles.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.display_name}
+                      </option>
+                    ))}
+                  </select>
+                  <button type="button" className="btn btn-sm btn-primary" onClick={() => handleAllocate(s.id)}>
+                    Assign
+                  </button>
+                </div>
+              ) : (
+                <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => setAllocateFor(s.id)}>
+                  Allocate
+                </button>
               ))}
-              {stalls.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="text-muted text-small" style={{ textAlign: "center", padding: "2rem" }}>
-                    No stalls configured yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            {s.status === "booked" && s.allocation_id && (
+              <button type="button" className="btn btn-sm btn-ghost" style={{ color: "var(--ez-danger)" }} onClick={() => handleRelease(s.allocation_id!)}>
+                Release
+              </button>
+            )}
+          </>
+        )}
+      />
     </>
   );
 }
