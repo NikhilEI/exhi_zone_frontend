@@ -62,6 +62,7 @@ const ADMIN_NAV: NavItem[] = [
   { label: "Send Notification", href: "/exhibitor-zone/admin/notifications", icon: "bx-bell" },
   { label: "Reports" },
   { label: "Export Data", href: "/exhibitor-zone/admin/exports", icon: "bx-download" },
+  { label: "Legacy Import", href: "/exhibitor-zone/admin/legacy-import", icon: "bx-upload" },
   { label: "Admin" },
   { label: "Admin Users", href: "/exhibitor-zone/admin/users", icon: "bx-user-circle" }
 ];
@@ -116,6 +117,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const admin = isAdminTier(user.role);
   const navItems = (admin ? ADMIN_NAV : EXHIBITOR_NAV)
     .filter((item) => {
+      // Legacy Import creates real login accounts/orders in bulk — the
+      // backend restricts it to super_admin only, so hide the link for
+      // organiser/finance admins rather than showing a link that 403s.
+      if (item.href === "/exhibitor-zone/admin/legacy-import" && user.role !== "super_admin") return false;
       if (admin || !item.href || !activeServiceSlugs) return true;
       const match = item.href.match(/^\/exhibitor-zone\/services\/([^/]+)$/);
       // Only slugs with a form_templates row participate in the admin
