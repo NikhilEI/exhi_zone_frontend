@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import Swal from "sweetalert2";
 import { api, ApiError } from "../../_lib/apiClient";
 import { formatDate } from "../../_lib/format";
+import { EXHIBITOR_INFO_FORM_KEY } from "../../_lib/useMandatoryFormGate";
 
 interface MandatoryForm {
   id: number;
@@ -23,6 +26,7 @@ const STATUS_META: Record<MandatoryForm["status"], { label: string; badge: strin
 };
 
 export default function MandatoryFormsPage() {
+  const router = useRouter();
   const [forms, setForms] = useState<MandatoryForm[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -36,6 +40,18 @@ export default function MandatoryFormsPage() {
   }, []);
 
   const completedCount = forms.filter((f) => f.status === "completed").length;
+  const exhibitorInfoCompleted = forms.find((f) => f.form_key === EXHIBITOR_INFO_FORM_KEY)?.status === "completed";
+
+  function showLockedAlert() {
+    Swal.fire({
+      icon: "warning",
+      title: "Exhibitor Information Required",
+      text: "Please complete the Exhibitor Information form first — the other mandatory forms unlock once it's done.",
+      confirmButtonText: "Go to form"
+    }).then(() => {
+      router.push(`/exhibitor-zone/mandatory-forms/${EXHIBITOR_INFO_FORM_KEY}`);
+    });
+  }
 
   return (
     <>
@@ -97,9 +113,16 @@ export default function MandatoryFormsPage() {
                     </div>
                     <div className="d-flex align-center gap-2">
                       <span className={`badge ${meta.badge}`}>{meta.label}</span>
-                      <Link href={`/exhibitor-zone/mandatory-forms/${form.form_key}`} className={`btn btn-sm ${form.status === "completed" ? "btn-outline-primary" : "btn-primary"}`}>
-                        {form.status === "completed" ? "Edit" : "Continue"}
-                      </Link>
+                      {!exhibitorInfoCompleted && form.form_key !== EXHIBITOR_INFO_FORM_KEY ? (
+                        <button type="button" className="btn btn-sm btn-outline-primary" style={{ opacity: 0.6, cursor: "not-allowed" }} onClick={showLockedAlert}>
+                          <i className="bx bx-lock-alt" style={{ marginRight: "0.25rem" }} />
+                          Locked
+                        </button>
+                      ) : (
+                        <Link href={`/exhibitor-zone/mandatory-forms/${form.form_key}`} className={`btn btn-sm ${form.status === "completed" ? "btn-outline-primary" : "btn-primary"}`}>
+                          {form.status === "completed" ? "Edit" : "Continue"}
+                        </Link>
+                      )}
                     </div>
                   </div>
                 </div>

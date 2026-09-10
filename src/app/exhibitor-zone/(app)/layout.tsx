@@ -10,7 +10,7 @@ import Topbar from "../_components/Topbar";
 const EXHIBITOR_NAV: NavItem[] = [
   { label: "Main" },
   { label: "Dashboard", href: "/exhibitor-zone/dashboard", icon: "bx-home-circle" },
-  { label: "Company Profile", href: "/exhibitor-zone/profile", icon: "bx-buildings" },
+  // { label: "Company Profile", href: "/exhibitor-zone/profile", icon: "bx-buildings" }, // hidden for now, not needed
   { label: "Notifications", href: "/exhibitor-zone/notifications", icon: "bx-bell" },
   { label: "Mandatory Forms" },
   { label: "Mandatory Forms", href: "/exhibitor-zone/mandatory-forms", icon: "bx-list-check" },

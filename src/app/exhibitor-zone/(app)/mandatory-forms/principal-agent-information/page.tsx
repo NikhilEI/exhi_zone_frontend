@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "../../../_lib/apiClient";
+import { useMandatoryFormGate } from "../../../_lib/useMandatoryFormGate";
 import { countries } from "@/data/countries";
 
 const ADD_MORE_VALUE = "__add_more__";
@@ -45,6 +46,7 @@ const initialForm: FormState = {
 
 export default function PrincipalAgentInformationPage() {
   const router = useRouter();
+  const gateOk = useMandatoryFormGate();
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [records, setRecords] = useState<Record_[]>([]);
   const [noPrincipalAgent, setNoPrincipalAgent] = useState(false);
@@ -169,7 +171,7 @@ export default function PrincipalAgentInformationPage() {
 
   const entryNumber = records.length + 1;
 
-  if (loading) {
+  if (loading || !gateOk) {
     return (
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}>
         <div className="spinner" />

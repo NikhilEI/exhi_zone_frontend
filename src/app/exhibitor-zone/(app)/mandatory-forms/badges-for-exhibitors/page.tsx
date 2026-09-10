@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "../../../_lib/apiClient";
+import { useMandatoryFormGate } from "../../../_lib/useMandatoryFormGate";
 import { countries, findCountry } from "@/data/countries";
 
 interface BadgeRecord {
@@ -56,6 +57,7 @@ function downloadCsv(records: BadgeRecord[]) {
 
 export default function BadgesForExhibitorsPage() {
   const router = useRouter();
+  const gateOk = useMandatoryFormGate();
   const [records, setRecords] = useState<BadgeRecord[]>([]);
   const [form, setForm] = useState<FormState>(initialForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -145,7 +147,7 @@ export default function BadgesForExhibitorsPage() {
     }
   }
 
-  if (loading) {
+  if (loading || !gateOk) {
     return (
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}>
         <div className="spinner" />

@@ -111,6 +111,7 @@ export default function ProfilePage() {
               {message && <div className="alert alert-success mb-3">{message}</div>}
               {error && <div className="alert alert-danger mb-3">{error}</div>}
 
+              {/* Company profile edit form hidden for now — not needed at the moment.
               <form noValidate onSubmit={handleSubmit}>
                 <div className="grid grid-2">
                   <div className="form-group">
@@ -171,6 +172,7 @@ export default function ProfilePage() {
                   <p className="text-xs text-muted mb-0">Staff accounts have view-only access. Contact your company admin to make changes.</p>
                 )}
               </form>
+              */}
             </div>
           </div>
 

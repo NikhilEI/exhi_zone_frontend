@@ -38,6 +38,7 @@ function AdminDocumentsPageInner() {
   const [loadingDocs, setLoadingDocs] = useState(false);
   const [docType, setDocType] = useState(DOC_TYPES[0].value);
   const [uploading, setUploading] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -99,6 +100,25 @@ function AdminDocumentsPageInner() {
     }
   }
 
+  async function handleDelete(doc: Document) {
+    if (!selected) return;
+    if (!confirm(`Delete the ${DOC_TYPES.find((t) => t.value === doc.document_type)?.label || doc.document_type} on file for ${selected.display_name}?`)) return;
+
+    setDeletingId(doc.id);
+    setError("");
+    setMessage("");
+    try {
+      await api.delete(`/documents/${doc.id}`);
+      loadDocuments(selected.id);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to delete document.");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  const existingForType = documents.find((d) => d.document_type === docType);
+
   const profileColumns: DataTableColumn<Profile>[] = [
     { key: "display_name", label: "Company" },
     { key: "legal_name", label: "Legal Name" },
@@ -153,6 +173,14 @@ function AdminDocumentsPageInner() {
           <span className="card-title">Upload a Document</span>
         </div>
         <div className="card-body">
+          {existingForType && (
+            <div className="alert alert-warning mb-3">
+              <i className="bx bx-error" />
+              <span className="text-small">
+                A {DOC_TYPES.find((t) => t.value === docType)?.label} is already on file for this exhibitor. Delete it below before uploading a new one.
+              </span>
+            </div>
+          )}
           <form onSubmit={handleUpload}>
             <div className="grid grid-3" style={{ alignItems: "end" }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
@@ -167,10 +195,10 @@ function AdminDocumentsPageInner() {
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">File (PDF)</label>
-                <input type="file" className="form-control" ref={fileInputRef} accept=".pdf" required />
+                <input type="file" className="form-control" ref={fileInputRef} accept=".pdf" required disabled={!!existingForType} />
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <button type="submit" className="btn btn-primary w-100" disabled={uploading}>
+                <button type="submit" className="btn btn-primary w-100" disabled={uploading || !!existingForType}>
                   {uploading ? "Uploading..." : "Upload"}
                 </button>
               </div>
@@ -203,7 +231,18 @@ function AdminDocumentsPageInner() {
                     {d.original_filename}
                   </a>
                 </div>
-                <span className="text-xs text-muted">Uploaded {formatDate(d.created_at)}</span>
+                <div className="d-flex align-center gap-2">
+                  <span className="text-xs text-muted">Uploaded {formatDate(d.created_at)}</span>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-icon btn-sm"
+                    style={{ color: "var(--ez-danger)" }}
+                    disabled={deletingId === d.id}
+                    onClick={() => handleDelete(d)}
+                  >
+                    <i className="bx bx-trash" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>

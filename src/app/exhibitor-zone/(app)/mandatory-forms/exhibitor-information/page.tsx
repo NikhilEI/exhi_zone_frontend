@@ -180,7 +180,7 @@ export default function ExhibitorInformationPage() {
       // Only delete freshly-uploaded files in this session — leave a
       // previously-saved logo on the server until the user uploads a
       // replacement (removing it here would just be re-added on submit).
-      api.delete(`/documents/${logoDocumentId}`).catch(() => {});
+      api.delete(`/documents/${logoDocumentId}`, { silent: true }).catch(() => {});
     }
     setLogoFile(null);
     setLogoDocumentId(null);

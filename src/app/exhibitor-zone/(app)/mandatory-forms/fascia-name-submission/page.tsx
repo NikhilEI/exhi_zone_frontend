@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "../../../_lib/apiClient";
+import { useMandatoryFormGate } from "../../../_lib/useMandatoryFormGate";
 import { formatDate } from "../../../_lib/format";
 import StatusBadge from "../../../_components/StatusBadge";
 
@@ -21,6 +22,7 @@ interface Submission {
 
 export default function FasciaNameSubmissionPage() {
   const router = useRouter();
+  const gateOk = useMandatoryFormGate();
   const [eligible, setEligible] = useState<boolean | null>(null);
   const [existing, setExisting] = useState<Submission | null>(null);
   const [fasciaName, setFasciaName] = useState("");
@@ -72,7 +74,7 @@ export default function FasciaNameSubmissionPage() {
     }
   }
 
-  if (loading || eligible === null) {
+  if (loading || eligible === null || !gateOk) {
     return (
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}>
         <div className="spinner" />

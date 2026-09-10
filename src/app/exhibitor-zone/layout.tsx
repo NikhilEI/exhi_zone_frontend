@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { SessionProvider } from "./_lib/SessionProvider";
 import "./ez-globals.css";
+import "sweetalert2/dist/sweetalert2.min.css";
 
 export const metadata: Metadata = {
   title: {

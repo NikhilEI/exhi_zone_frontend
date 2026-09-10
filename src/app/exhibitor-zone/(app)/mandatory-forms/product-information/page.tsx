@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "../../../_lib/apiClient";
+import { useMandatoryFormGate } from "../../../_lib/useMandatoryFormGate";
 
 interface Category {
   id: number;
@@ -19,6 +20,7 @@ interface Subcategory {
 
 export default function ProductInformationPage() {
   const router = useRouter();
+  const gateOk = useMandatoryFormGate();
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -115,7 +117,7 @@ export default function ProductInformationPage() {
     }
   }
 
-  if (loading) {
+  if (loading || !gateOk) {
     return (
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}>
         <div className="spinner" />

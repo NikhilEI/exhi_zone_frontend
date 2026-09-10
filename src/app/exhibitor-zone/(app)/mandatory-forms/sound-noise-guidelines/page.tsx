@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "../../../_lib/apiClient";
+import { useMandatoryFormGate } from "../../../_lib/useMandatoryFormGate";
 
 const GUIDELINE_LINK = "https://www.convergenceindia.org/exhibitor-zone/guidelines-for-sound-noise-level.aspx";
 
@@ -23,6 +24,7 @@ interface Acknowledgement {
 
 export default function SoundNoiseGuidelinesPage() {
   const router = useRouter();
+  const gateOk = useMandatoryFormGate();
   const [acknowledged, setAcknowledged] = useState(false);
   const [checkboxChecked, setCheckboxChecked] = useState(false);
   const [checkboxError, setCheckboxError] = useState("");
@@ -66,7 +68,7 @@ export default function SoundNoiseGuidelinesPage() {
     }
   }
 
-  if (loading) {
+  if (loading || !gateOk) {
     return (
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}>
         <div className="spinner" />

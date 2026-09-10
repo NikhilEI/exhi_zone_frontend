@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "../../../_lib/apiClient";
+import { useMandatoryFormGate } from "../../../_lib/useMandatoryFormGate";
 import { formatDate } from "../../../_lib/format";
 import StatusBadge from "../../../_components/StatusBadge";
 
@@ -60,6 +61,7 @@ const initialForm: FormState = { standContractor: "", attachDesign: "Yes" };
 
 export default function BoothDesignSubmissionPage() {
   const router = useRouter();
+  const gateOk = useMandatoryFormGate();
   const [eligible, setEligible] = useState<boolean | null>(null);
   const [existing, setExisting] = useState<Submission | null>(null);
   const [form, setForm] = useState<FormState>(initialForm);
@@ -92,7 +94,7 @@ export default function BoothDesignSubmissionPage() {
         if (found) {
           setForm({
             standContractor: found.data.standContractor || "",
-            attachDesign: "Yes"
+            attachDesign: found.data.attachDesign || "Yes"
           });
           if (found.data.designDocumentId) {
             setDesignDocumentId(found.data.designDocumentId);
@@ -135,9 +137,22 @@ export default function BoothDesignSubmissionPage() {
     }
   }
 
+  function handleAttachDesignChange(value: "Yes" | "No") {
+    setField("attachDesign", value);
+    setErrors((prev) => {
+      if (!prev.design) return prev;
+      const next = { ...prev };
+      delete next.design;
+      return next;
+    });
+    if (value === "No" && (designFile || designDocumentId)) {
+      handleDesignRemove();
+    }
+  }
+
   async function handleDesignRemove() {
     if (designDocumentId && designFile) {
-      api.delete(`/documents/${designDocumentId}`).catch(() => {});
+      api.delete(`/documents/${designDocumentId}`, { silent: true }).catch(() => {});
     }
     setDesignFile(null);
     setDesignDocumentId(null);
@@ -147,7 +162,7 @@ export default function BoothDesignSubmissionPage() {
   function validate(): Record<string, string> {
     const next: Record<string, string> = {};
     if (!form.standContractor) next.standContractor = "Please select your stand contractor.";
-    if (!designDocumentId) next.design = "Please attach your booth design.";
+    if (form.attachDesign === "Yes" && !designDocumentId) next.design = "Please attach your booth design.";
     return next;
   }
 
@@ -169,8 +184,8 @@ export default function BoothDesignSubmissionPage() {
     try {
       await api.post("/forms/submissions/booth-design-submission", {
         standContractor: form.standContractor,
-        attachDesign: "Yes",
-        designDocumentId,
+        attachDesign: form.attachDesign,
+        designDocumentId: form.attachDesign === "Yes" ? designDocumentId : undefined,
         declarationAccepted: true
       });
 
@@ -186,7 +201,7 @@ export default function BoothDesignSubmissionPage() {
     }
   }
 
-  if (loading || eligible === null) {
+  if (loading || eligible === null || !gateOk) {
     return (
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}>
         <div className="spinner" />
@@ -283,46 +298,50 @@ export default function BoothDesignSubmissionPage() {
             </label>
             <div className="d-flex gap-3" style={{ marginTop: "0.5rem" }}>
               <label className="d-flex align-center gap-1" style={{ cursor: "pointer" }}>
-                <input type="radio" name="attachDesign" checked disabled readOnly />
+                <input type="radio" name="attachDesign" checked={form.attachDesign === "Yes"} onChange={() => handleAttachDesignChange("Yes")} />
                 Yes
               </label>
-              <label className="d-flex align-center gap-1" style={{ cursor: "not-allowed" }}>
-                <input type="radio" name="attachDesign" disabled />
+              <label className="d-flex align-center gap-1" style={{ cursor: "pointer" }}>
+                <input type="radio" name="attachDesign" checked={form.attachDesign === "No"} onChange={() => handleAttachDesignChange("No")} />
                 No
               </label>
             </div>
-            <p className="text-xs text-muted mt-1">Attaching your booth design is mandatory.</p>
+            <p className="text-xs text-muted mt-1">
+              {form.attachDesign === "No" ? "You can skip attaching a design file for now." : "Attaching your booth design is mandatory."}
+            </p>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">
-              Design File <span style={{ color: "var(--ez-danger)" }}>*</span>
-            </label>
-            {!designFile && !designExistingLabel && (
-              <input
-                type="file"
-                className={`form-control ${errors.design ? "is-invalid" : ""}`}
-                onChange={(e) => handleDesignSelect(e.target.files?.[0] || null)}
-              />
-            )}
-            {(designFile || designExistingLabel) && (
-              <div className="d-flex align-center gap-2" style={{ padding: "0.625rem 0.875rem", border: "1px solid var(--ez-border)", borderRadius: "var(--ez-border-radius)" }}>
-                {designUploading ? (
-                  <div className="spinner" style={{ width: 18, height: 18, borderWidth: 2 }} />
-                ) : (
-                  <i className="bx bx-check-circle" style={{ color: "var(--ez-success)" }} />
-                )}
-                <span className="text-small" style={{ flex: 1 }}>
-                  {designFile ? designFile.name : designExistingLabel}
-                </span>
-                <button type="button" className="btn btn-ghost btn-sm" onClick={handleDesignRemove} disabled={designUploading}>
-                  Remove
-                </button>
-              </div>
-            )}
-            {designError && <div className="invalid-feedback d-block">{designError}</div>}
-            {errors.design && <div className="invalid-feedback d-block">{errors.design}</div>}
-          </div>
+          {form.attachDesign === "Yes" && (
+            <div className="form-group">
+              <label className="form-label">
+                Design File <span style={{ color: "var(--ez-danger)" }}>*</span>
+              </label>
+              {!designFile && !designExistingLabel && (
+                <input
+                  type="file"
+                  className={`form-control ${errors.design ? "is-invalid" : ""}`}
+                  onChange={(e) => handleDesignSelect(e.target.files?.[0] || null)}
+                />
+              )}
+              {(designFile || designExistingLabel) && (
+                <div className="d-flex align-center gap-2" style={{ padding: "0.625rem 0.875rem", border: "1px solid var(--ez-border)", borderRadius: "var(--ez-border-radius)" }}>
+                  {designUploading ? (
+                    <div className="spinner" style={{ width: 18, height: 18, borderWidth: 2 }} />
+                  ) : (
+                    <i className="bx bx-check-circle" style={{ color: "var(--ez-success)" }} />
+                  )}
+                  <span className="text-small" style={{ flex: 1 }}>
+                    {designFile ? designFile.name : designExistingLabel}
+                  </span>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={handleDesignRemove} disabled={designUploading}>
+                    Remove
+                  </button>
+                </div>
+              )}
+              {designError && <div className="invalid-feedback d-block">{designError}</div>}
+              {errors.design && <div className="invalid-feedback d-block">{errors.design}</div>}
+            </div>
+          )}
 
           <div className="d-flex justify-between align-center" style={{ flexWrap: "wrap", gap: "1rem", marginTop: "1rem" }}>
             <span className="text-xs text-muted">Note: * marked fields are mandatory</span>
