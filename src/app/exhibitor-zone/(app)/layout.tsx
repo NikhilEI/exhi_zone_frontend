@@ -136,14 +136,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <Sidebar items={navItems} appName={admin ? "Admin CMS" : "Exhibitor Zone"} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} isCollapsed={sidebarCollapsed} />
 
         <div className="layout-page">
-          <Topbar onMenuToggle={handleMenuToggle} eventName="Wellness India Expo 2027" />
+          <Topbar onMenuToggle={handleMenuToggle} eventName="Convergence India Expo 2027" />
 
           <div className="content-wrapper">
             <div style={{ minHeight: "calc(100vh - var(--ez-navbar-height) - 10rem)" }}>{children}</div>
 
             <footer className="layout-footer" style={{ borderTop: "1px solid var(--ez-divider)", paddingTop: "1.5rem", marginTop: "3rem" }}>
               <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "1rem" }}>
-                <p className="text-muted text-xs mb-0">© {new Date().getFullYear()} Wellness India Expo. All rights reserved.</p>
+                <p className="text-muted text-xs mb-0">© {new Date().getFullYear()} Convergence India Expo. All rights reserved.</p>
               </div>
             </footer>
           </div>

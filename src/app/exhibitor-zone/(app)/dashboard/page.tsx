@@ -132,7 +132,7 @@ export default function ExhibitorDashboardPage() {
 
       <div className="content-header">
         <h1 className="content-title">Dashboard</h1>
-        <p className="content-subtitle">Wellness India Expo 2027 — Welcome back! Here&apos;s your activity overview.</p>
+        <p className="content-subtitle">Convergence India Expo 2027 — Welcome back! Here&apos;s your activity overview.</p>
       </div>
 
       <div className="grid grid-4 mb-3">

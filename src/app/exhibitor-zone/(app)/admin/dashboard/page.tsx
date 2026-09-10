@@ -105,7 +105,7 @@ export default function AdminDashboardPage() {
       <div className="content-header d-flex justify-between align-center">
         <div>
           <h1 className="content-title">Admin Dashboard</h1>
-          <p className="content-subtitle">Wellness India Expo 2027 — Real-time operations overview</p>
+          <p className="content-subtitle">Convergence India Expo 2027 — Real-time operations overview</p>
         </div>
         <Link href="/exhibitor-zone/admin/events" className="btn btn-primary btn-sm">
           <i className="bx bx-calendar-plus" />

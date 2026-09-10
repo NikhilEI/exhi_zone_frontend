@@ -25,3 +25,11 @@ export function showSuccessAlert(message: string) {
 export function showErrorAlert(message: string) {
   Toast.fire({ icon: "error", title: message || "Something went wrong. Please try again." });
 }
+
+export function showWarningAlert(message: string) {
+  Toast.fire({ icon: "warning", title: message });
+}
+
+export function showInfoAlert(message: string) {
+  Toast.fire({ icon: "info", title: message });
+}

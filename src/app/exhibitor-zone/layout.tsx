@@ -6,9 +6,9 @@ import "sweetalert2/dist/sweetalert2.min.css";
 export const metadata: Metadata = {
   title: {
     template: "%s | Exhibitor Zone",
-    default: "Exhibitor Zone | Wellness India Expo 2027"
+    default: "Exhibitor Zone | Convergence India Expo 2027"
   },
-  description: "Exhibitor portal and admin panel for Wellness India Expo 2027."
+  description: "Exhibitor portal and admin panel for Convergence India Expo 2027."
 };
 
 // This has no layout.tsx above it in app/, so it becomes its own root layout —

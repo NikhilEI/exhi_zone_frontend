@@ -1,9 +1,9 @@
 import { api } from "./apiClient";
-import { showErrorAlert } from "./alerts";
+import { showErrorAlert, showInfoAlert, showSuccessAlert, showWarningAlert } from "./alerts";
 
 const CHECKOUT_SCRIPT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
 const CHECKOUT_SCRIPT_ID = "razorpay-checkout-js";
-const BRAND_NAME = "Wellness India Expo 2027";
+const BRAND_NAME = "Convergence India Expo 2027";
 const BRAND_COLOR = "#696cff"; // --ez-primary
 
 interface RazorpayCheckoutPayload {
@@ -121,21 +121,43 @@ export async function payForOrder(orderId: number, onSettled: (paid: boolean) =>
     notes: { orderNumber: payload.orderNumber },
     theme: { color: BRAND_COLOR },
     handler: (response) => {
+      // Silenced so we control the wording ourselves — "success" here means
+      // Razorpay reported the payment as captured AND our own signature
+      // check confirmed it; framed as "Pending" (not an error) if our check
+      // fails, since the charge may well have gone through and the webhook
+      // will reconcile it shortly either way.
       api
-        .post("/payments/verify", {
-          transactionId: payload.transactionId,
-          razorpayOrderId: response.razorpay_order_id,
-          razorpayPaymentId: response.razorpay_payment_id,
-          razorpaySignature: response.razorpay_signature
+        .post(
+          "/payments/verify",
+          {
+            transactionId: payload.transactionId,
+            razorpayOrderId: response.razorpay_order_id,
+            razorpayPaymentId: response.razorpay_payment_id,
+            razorpaySignature: response.razorpay_signature
+          },
+          { silent: true }
+        )
+        .then(() => {
+          showSuccessAlert("Payment successful! Your order has been updated.");
+          settleOnce(true);
         })
-        .then(() => settleOnce(true))
-        .catch((err: unknown) => {
-          void err; // apiClient already surfaced the verification-failure toast
+        .catch(() => {
+          showWarningAlert("Payment received — confirming with our system now. Check Payment History in a few minutes if this doesn't update automatically.");
           settleOnce(false);
         });
     },
     modal: {
-      ondismiss: () => settleOnce(false)
+      // Fires when the exhibitor closes the checkout screen without
+      // completing payment — the one case that previously showed nothing at
+      // all. Guarded by `settled` so it never fires after a real
+      // success/failure has already been reported (Razorpay can call this
+      // even after `handler` in some edge cases).
+      ondismiss: () => {
+        if (!settled) {
+          showInfoAlert("Payment cancelled. You can try again anytime with \"Pay Now\".");
+        }
+        settleOnce(false);
+      }
     }
   });
 
