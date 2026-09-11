@@ -7,6 +7,8 @@ import { useMandatoryFormGate } from "../../../_lib/useMandatoryFormGate";
 import { useAdminProfileParam, withProfileId } from "../../../_lib/adminProfile";
 import AdminEditingBanner from "../../../_components/AdminEditingBanner";
 import SupportContactBanner from "../../../_components/SupportContactBanner";
+import LockNote from "../../../_components/LockNote";
+import { makeIsLocked } from "../../../_lib/useLockedFields";
 import { formatDate } from "../../../_lib/format";
 import StatusBadge from "../../../_components/StatusBadge";
 
@@ -53,6 +55,7 @@ interface Submission {
   reviewer_notes: string | null;
   created_at: string;
   data: { standContractor?: string; attachDesign?: "Yes" | "No"; designDocumentId?: number };
+  lockedFields: string[];
 }
 
 interface FormState {
@@ -83,6 +86,8 @@ export default function BoothDesignSubmissionPage() {
   const [designExistingLabel, setDesignExistingLabel] = useState("");
   const [designUploading, setDesignUploading] = useState(false);
   const [designError, setDesignError] = useState("");
+  const [lockedFields, setLockedFields] = useState<string[]>([]);
+  const isLocked = makeIsLocked(profileId, lockedFields);
 
   useEffect(() => {
     // Admin editing on behalf of an exhibitor bypasses the Raw-Space-only
@@ -110,6 +115,7 @@ export default function BoothDesignSubmissionPage() {
             setDesignDocumentId(found.data.designDocumentId);
             setDesignExistingLabel("Previously uploaded design");
           }
+          setLockedFields(found.lockedFields || []);
         }
       })
       .catch(() => {})
@@ -296,6 +302,7 @@ export default function BoothDesignSubmissionPage() {
               className={`form-control form-select ${errors.standContractor ? "is-invalid" : ""}`}
               value={form.standContractor}
               onChange={(e) => setField("standContractor", e.target.value)}
+              disabled={isLocked("standContractor")}
             >
               <option value="">Select Contractor</option>
               {CONTRACTOR_OPTIONS.map((c) => (
@@ -305,6 +312,7 @@ export default function BoothDesignSubmissionPage() {
               ))}
             </select>
             {errors.standContractor && <div className="invalid-feedback d-block">{errors.standContractor}</div>}
+            {isLocked("standContractor") && <LockNote />}
           </div>
 
           <div className="form-group">
@@ -313,17 +321,30 @@ export default function BoothDesignSubmissionPage() {
             </label>
             <div className="d-flex gap-3" style={{ marginTop: "0.5rem" }}>
               <label className="d-flex align-center gap-1" style={{ cursor: "pointer" }}>
-                <input type="radio" name="attachDesign" checked={form.attachDesign === "Yes"} onChange={() => handleAttachDesignChange("Yes")} />
+                <input
+                  type="radio"
+                  name="attachDesign"
+                  checked={form.attachDesign === "Yes"}
+                  onChange={() => handleAttachDesignChange("Yes")}
+                  disabled={isLocked("attachDesign")}
+                />
                 Yes
               </label>
               <label className="d-flex align-center gap-1" style={{ cursor: "pointer" }}>
-                <input type="radio" name="attachDesign" checked={form.attachDesign === "No"} onChange={() => handleAttachDesignChange("No")} />
+                <input
+                  type="radio"
+                  name="attachDesign"
+                  checked={form.attachDesign === "No"}
+                  onChange={() => handleAttachDesignChange("No")}
+                  disabled={isLocked("attachDesign")}
+                />
                 No
               </label>
             </div>
             <p className="text-xs text-muted mt-1">
               {form.attachDesign === "No" ? "You can skip attaching a design file for now." : "Attaching your booth design is mandatory."}
             </p>
+            {isLocked("attachDesign") && <LockNote />}
           </div>
 
           {form.attachDesign === "Yes" && (
@@ -331,7 +352,7 @@ export default function BoothDesignSubmissionPage() {
               <label className="form-label">
                 Design File <span style={{ color: "var(--ez-danger)" }}>*</span>
               </label>
-              {!designFile && !designExistingLabel && (
+              {!designFile && !designExistingLabel && !isLocked("designDocumentId") && (
                 <input
                   type="file"
                   className={`form-control ${errors.design ? "is-invalid" : ""}`}
@@ -348,13 +369,16 @@ export default function BoothDesignSubmissionPage() {
                   <span className="text-small" style={{ flex: 1 }}>
                     {designFile ? designFile.name : designExistingLabel}
                   </span>
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={handleDesignRemove} disabled={designUploading}>
-                    Remove
-                  </button>
+                  {!isLocked("designDocumentId") && (
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={handleDesignRemove} disabled={designUploading}>
+                      Remove
+                    </button>
+                  )}
                 </div>
               )}
               {designError && <div className="invalid-feedback d-block">{designError}</div>}
               {errors.design && <div className="invalid-feedback d-block">{errors.design}</div>}
+              {isLocked("designDocumentId") && <LockNote />}
             </div>
           )}
 

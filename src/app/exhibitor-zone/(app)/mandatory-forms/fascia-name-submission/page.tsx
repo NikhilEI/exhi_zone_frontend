@@ -7,6 +7,8 @@ import { useMandatoryFormGate } from "../../../_lib/useMandatoryFormGate";
 import { useAdminProfileParam, withProfileId } from "../../../_lib/adminProfile";
 import AdminEditingBanner from "../../../_components/AdminEditingBanner";
 import SupportContactBanner from "../../../_components/SupportContactBanner";
+import LockNote from "../../../_components/LockNote";
+import { makeIsLocked } from "../../../_lib/useLockedFields";
 import { formatDate } from "../../../_lib/format";
 import StatusBadge from "../../../_components/StatusBadge";
 
@@ -21,6 +23,7 @@ interface Submission {
   reviewer_notes: string | null;
   created_at: string;
   data: { fasciaName?: string };
+  lockedFields: string[];
 }
 
 export default function FasciaNameSubmissionPage() {
@@ -35,6 +38,9 @@ export default function FasciaNameSubmissionPage() {
   const [apiError, setApiError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [savedMessage, setSavedMessage] = useState("");
+  const [lockedFields, setLockedFields] = useState<string[]>([]);
+  const isLocked = makeIsLocked(profileId, lockedFields);
+  const fieldLocked = isLocked("fasciaName");
 
   useEffect(() => {
     // Admin editing on behalf of an exhibitor bypasses the Shell-Space-only
@@ -52,7 +58,10 @@ export default function FasciaNameSubmissionPage() {
       .then((body) => {
         const found = body.submissions.find((s) => s.template_slug === "fascia-name-submission") || null;
         setExisting(found);
-        if (found) setFasciaName(found.data.fasciaName || "");
+        if (found) {
+          setFasciaName(found.data.fasciaName || "");
+          setLockedFields(found.lockedFields || []);
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -171,6 +180,7 @@ export default function FasciaNameSubmissionPage() {
                 className={`form-control ${error ? "is-invalid" : ""}`}
                 value={fasciaName}
                 maxLength={FASCIA_MAX_LENGTH}
+                disabled={fieldLocked}
                 onChange={(e) => {
                   setFasciaName(e.target.value.slice(0, FASCIA_MAX_LENGTH));
                   setError("");
@@ -181,11 +191,12 @@ export default function FasciaNameSubmissionPage() {
                 <span className="text-xs text-muted">Fascia Name as to be printed on the booth (Max {FASCIA_MAX_LENGTH} Characters)</span>
                 <span className="text-xs text-muted">No. of characters left: {charsLeft}</span>
               </div>
+              {fieldLocked && <LockNote />}
             </div>
 
             <div className="d-flex justify-between align-center" style={{ flexWrap: "wrap", gap: "1rem", marginTop: "1rem" }}>
               <span className="text-xs text-muted">Note: * fields are mandatory</span>
-              <button type="submit" className="btn btn-primary" disabled={submitting}>
+              <button type="submit" className="btn btn-primary" disabled={submitting || fieldLocked}>
                 {submitting ? "Saving..." : "Submit"}
               </button>
             </div>

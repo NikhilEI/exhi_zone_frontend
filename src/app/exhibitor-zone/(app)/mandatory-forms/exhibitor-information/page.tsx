@@ -6,6 +6,8 @@ import { api, ApiError } from "../../../_lib/apiClient";
 import { useAdminProfileParam, withProfileId } from "../../../_lib/adminProfile";
 import AdminEditingBanner from "../../../_components/AdminEditingBanner";
 import SupportContactBanner from "../../../_components/SupportContactBanner";
+import LockNote from "../../../_components/LockNote";
+import { makeIsLocked } from "../../../_lib/useLockedFields";
 import { countries, findCountry } from "@/data/countries";
 
 const HALL_OPTIONS = ["Hall 1", "Hall 2", "Hall 3", "Hall 4", "Hall 5"];
@@ -84,14 +86,6 @@ const initialForm: FormState = {
   contactAlternateEmail: ""
 };
 
-function LockNote() {
-  return (
-    <div className="form-text" style={{ color: "var(--ez-text-muted, #6b7280)" }}>
-      🔒 Locked — set during registration. Contact your organiser to change this.
-    </div>
-  );
-}
-
 export default function ExhibitorInformationPage() {
   const router = useRouter();
   const { profileId, company } = useAdminProfileParam();
@@ -109,13 +103,7 @@ export default function ExhibitorInformationPage() {
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoError, setLogoError] = useState("");
   const [lockedFields, setLockedFields] = useState<string[]>([]);
-
-  // A field imported/set by an admin stays locked for the exhibitor's own
-  // view of this form — admin editing mode (?profileId=) is never locked out
-  // of anything, matching what the backend enforces.
-  function isLocked(field: string) {
-    return !profileId && lockedFields.includes(field);
-  }
+  const isLocked = makeIsLocked(profileId, lockedFields);
 
   useEffect(() => {
     api

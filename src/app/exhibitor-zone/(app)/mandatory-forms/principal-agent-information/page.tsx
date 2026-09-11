@@ -7,6 +7,8 @@ import { useMandatoryFormGate } from "../../../_lib/useMandatoryFormGate";
 import { useAdminProfileParam, withProfileId } from "../../../_lib/adminProfile";
 import AdminEditingBanner from "../../../_components/AdminEditingBanner";
 import SupportContactBanner from "../../../_components/SupportContactBanner";
+import LockNote from "../../../_components/LockNote";
+import { makeIsLocked } from "../../../_lib/useLockedFields";
 import { countries } from "@/data/countries";
 
 const ADD_MORE_VALUE = "__add_more__";
@@ -62,16 +64,23 @@ export default function PrincipalAgentInformationPage() {
   const [declarationSaving, setDeclarationSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Record_ | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [lockedFields, setLockedFields] = useState<string[]>([]);
+  const isLocked = makeIsLocked(profileId, lockedFields);
+  const recordsLocked = isLocked("records");
+  const declarationLocked = isLocked("declaration");
 
   useEffect(() => {
     Promise.all([
       api.get<{ sectors: Sector[] }>("/mandatory-forms/principal-agent-sectors"),
-      api.get<{ records: Record_[]; noPrincipalAgent: boolean }>(withProfileId("/mandatory-forms/principal-agent-information", profileId))
+      api.get<{ records: Record_[]; noPrincipalAgent: boolean; lockedFields: string[] }>(
+        withProfileId("/mandatory-forms/principal-agent-information", profileId)
+      )
     ])
       .then(([sectorBody, infoBody]) => {
         setSectors(sectorBody.sectors);
         setRecords(infoBody.records);
         setNoPrincipalAgent(infoBody.noPrincipalAgent);
+        setLockedFields(infoBody.lockedFields || []);
       })
       .catch((err) => setApiError(err instanceof ApiError ? err.message : "Failed to load Principal/Agent information."))
       .finally(() => setLoading(false));
@@ -240,9 +249,11 @@ export default function PrincipalAgentInformationPage() {
                       <td>{r.country_name}</td>
                       <td>{r.sector_name || r.custom_sector || "—"}</td>
                       <td>
-                        <button type="button" className="btn btn-ghost btn-sm" style={{ color: "var(--ez-danger)" }} onClick={() => setDeleteTarget(r)}>
-                          Delete
-                        </button>
+                        {!recordsLocked && (
+                          <button type="button" className="btn btn-ghost btn-sm" style={{ color: "var(--ez-danger)" }} onClick={() => setDeleteTarget(r)}>
+                            Delete
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -252,20 +263,29 @@ export default function PrincipalAgentInformationPage() {
           )}
 
           <div className="form-group" style={{ marginTop: "1.25rem", marginBottom: 0 }}>
-            <label className="d-flex align-center gap-2" style={{ cursor: records.length > 0 ? "not-allowed" : "pointer" }}>
+            <label className="d-flex align-center gap-2" style={{ cursor: records.length > 0 || declarationLocked ? "not-allowed" : "pointer" }}>
               <input
                 type="checkbox"
                 checked={noPrincipalAgent}
-                disabled={records.length > 0 || declarationSaving}
+                disabled={records.length > 0 || declarationSaving || declarationLocked}
                 onChange={(e) => handleNoPrincipalAgentToggle(e.target.checked)}
               />
               <span className="text-small">I do not have any Principal / Agent information to provide.</span>
             </label>
+            {declarationLocked && <LockNote />}
           </div>
         </div>
       </div>
 
-      {!noPrincipalAgent && (
+      {!noPrincipalAgent && recordsLocked && (
+        <div className="card">
+          <div className="card-body">
+            <LockNote />
+          </div>
+        </div>
+      )}
+
+      {!noPrincipalAgent && !recordsLocked && (
         <div className="card">
           <div className="card-header">
             <span className="card-title">Add Principal / Agent</span>

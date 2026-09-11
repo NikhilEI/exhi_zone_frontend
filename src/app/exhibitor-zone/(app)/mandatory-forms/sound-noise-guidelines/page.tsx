@@ -7,6 +7,8 @@ import { useMandatoryFormGate } from "../../../_lib/useMandatoryFormGate";
 import { useAdminProfileParam, withProfileId } from "../../../_lib/adminProfile";
 import AdminEditingBanner from "../../../_components/AdminEditingBanner";
 import SupportContactBanner from "../../../_components/SupportContactBanner";
+import LockNote from "../../../_components/LockNote";
+import { makeIsLocked } from "../../../_lib/useLockedFields";
 
 const GUIDELINE_LINK = "https://www.convergenceindia.org/exhibitor-zone/guidelines-for-sound-noise-level.aspx";
 
@@ -36,15 +38,19 @@ export default function SoundNoiseGuidelinesPage() {
   const [apiError, setApiError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [lockedFields, setLockedFields] = useState<string[]>([]);
+  const isLocked = makeIsLocked(profileId, lockedFields);
+  const fieldLocked = isLocked("acknowledged");
 
   useEffect(() => {
     api
-      .get<{ acknowledgement: Acknowledgement | null }>(withProfileId("/mandatory-forms/sound-noise-guidelines", profileId))
+      .get<{ acknowledgement: Acknowledgement | null; lockedFields: string[] }>(withProfileId("/mandatory-forms/sound-noise-guidelines", profileId))
       .then((body) => {
         if (body.acknowledgement?.acknowledged) {
           setAcknowledged(true);
           setCheckboxChecked(true);
         }
+        setLockedFields(body.lockedFields || []);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -158,16 +164,17 @@ export default function SoundNoiseGuidelinesPage() {
                     setCheckboxChecked(e.target.checked);
                     setCheckboxError("");
                   }}
-                  disabled={acknowledged}
+                  disabled={acknowledged || fieldLocked}
                 />
                 <span className="text-small fw-600">I confirm that I have read &amp; understood the above information.</span>
               </label>
               {checkboxError && <div className="invalid-feedback d-block">{checkboxError}</div>}
+              {fieldLocked && <LockNote />}
             </div>
 
             <div className="d-flex justify-between align-center" style={{ flexWrap: "wrap", gap: "1rem", marginTop: "1rem" }}>
               <span className="text-xs text-muted">Note: acknowledgement is mandatory</span>
-              <button type="submit" className="btn btn-primary" disabled={submitting || !checkboxChecked}>
+              <button type="submit" className="btn btn-primary" disabled={submitting || !checkboxChecked || fieldLocked}>
                 {submitting ? "Saving..." : "Submit"}
               </button>
             </div>

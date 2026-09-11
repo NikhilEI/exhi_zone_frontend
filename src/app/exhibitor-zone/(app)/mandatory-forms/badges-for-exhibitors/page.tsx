@@ -7,6 +7,8 @@ import { useMandatoryFormGate } from "../../../_lib/useMandatoryFormGate";
 import { useAdminProfileParam, withProfileId } from "../../../_lib/adminProfile";
 import AdminEditingBanner from "../../../_components/AdminEditingBanner";
 import SupportContactBanner from "../../../_components/SupportContactBanner";
+import LockNote from "../../../_components/LockNote";
+import { makeIsLocked } from "../../../_lib/useLockedFields";
 import { countries, findCountry } from "@/data/countries";
 
 interface BadgeRecord {
@@ -70,11 +72,17 @@ export default function BadgesForExhibitorsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<BadgeRecord | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [lockedFields, setLockedFields] = useState<string[]>([]);
+  const isLocked = makeIsLocked(profileId, lockedFields);
+  const recordsLocked = isLocked("records");
 
   useEffect(() => {
     api
-      .get<{ records: BadgeRecord[] }>(withProfileId("/mandatory-forms/badges-for-exhibitors", profileId))
-      .then((body) => setRecords(body.records))
+      .get<{ records: BadgeRecord[]; lockedFields: string[] }>(withProfileId("/mandatory-forms/badges-for-exhibitors", profileId))
+      .then((body) => {
+        setRecords(body.records);
+        setLockedFields(body.lockedFields || []);
+      })
       .catch((err) => setApiError(err instanceof ApiError ? err.message : "Failed to load badge information."))
       .finally(() => setLoading(false));
   }, [profileId]);
@@ -223,9 +231,11 @@ export default function BadgesForExhibitorsPage() {
                       <td>{r.mobile_no}</td>
                       <td>{r.country}</td>
                       <td>
-                        <button type="button" className="btn btn-ghost btn-sm" style={{ color: "var(--ez-danger)" }} onClick={() => setDeleteTarget(r)}>
-                          Delete
-                        </button>
+                        {!recordsLocked && (
+                          <button type="button" className="btn btn-ghost btn-sm" style={{ color: "var(--ez-danger)" }} onClick={() => setDeleteTarget(r)}>
+                            Delete
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -236,6 +246,15 @@ export default function BadgesForExhibitorsPage() {
         </div>
       </div>
 
+      {recordsLocked && (
+        <div className="card">
+          <div className="card-body">
+            <LockNote />
+          </div>
+        </div>
+      )}
+
+      {!recordsLocked && (
       <div className="card">
         <div className="card-header">
           <span className="card-title">Add Badge</span>
@@ -326,6 +345,7 @@ export default function BadgesForExhibitorsPage() {
           </form>
         </div>
       </div>
+      )}
 
       <div className="d-flex justify-end" style={{ marginTop: "1.5rem" }}>
         <button

@@ -75,6 +75,8 @@ export const api = {
     request<T>(path, { method: "POST", body: data instanceof FormData ? data : JSON.stringify(data ?? {}), ...opts }),
   patch: <T>(path: string, data?: unknown, opts?: RequestOptions) =>
     request<T>(path, { method: "PATCH", body: JSON.stringify(data ?? {}), ...opts }),
+  put: <T>(path: string, data?: unknown, opts?: RequestOptions) =>
+    request<T>(path, { method: "PUT", body: JSON.stringify(data ?? {}), ...opts }),
   delete: <T>(path: string, opts?: RequestOptions) => request<T>(path, { method: "DELETE", ...opts }),
   fileUrl: (path: string) => `${API_BASE}${path}`,
   postForBlob

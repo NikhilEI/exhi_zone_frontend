@@ -7,6 +7,8 @@ import { useMandatoryFormGate } from "../../../_lib/useMandatoryFormGate";
 import { useAdminProfileParam, withProfileId } from "../../../_lib/adminProfile";
 import AdminEditingBanner from "../../../_components/AdminEditingBanner";
 import SupportContactBanner from "../../../_components/SupportContactBanner";
+import LockNote from "../../../_components/LockNote";
+import { makeIsLocked } from "../../../_lib/useLockedFields";
 
 interface Category {
   id: number;
@@ -35,13 +37,18 @@ export default function ProductInformationPage() {
   const [apiError, setApiError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [lockedFields, setLockedFields] = useState<string[]>([]);
+  const isLocked = makeIsLocked(profileId, lockedFields);
+  const formLocked = isLocked("selections");
 
   const othersSubcategory = useMemo(() => subcategories.find((s) => s.name === "Others"), [subcategories]);
 
   useEffect(() => {
     Promise.all([
       api.get<{ categories: Category[]; subcategories: Subcategory[] }>("/mandatory-forms/product-categories"),
-      api.get<{ selections: { subcategory_id: number; other_specification: string | null }[] }>(withProfileId("/mandatory-forms/product-information", profileId))
+      api.get<{ selections: { subcategory_id: number; other_specification: string | null }[]; lockedFields: string[] }>(
+        withProfileId("/mandatory-forms/product-information", profileId)
+      )
     ])
       .then(([ref, existing]) => {
         setCategories(ref.categories);
@@ -49,6 +56,7 @@ export default function ProductInformationPage() {
         setSelected(new Set(existing.selections.map((s) => s.subcategory_id)));
         const otherSelection = existing.selections.find((s) => s.other_specification);
         if (otherSelection) setOtherText(otherSelection.other_specification || "");
+        setLockedFields(existing.lockedFields || []);
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : "Failed to load product categories."))
       .finally(() => setLoading(false));
@@ -82,6 +90,7 @@ export default function ProductInformationPage() {
   }
 
   function toggleSubcategory(id: number) {
+    if (formLocked) return;
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -174,6 +183,7 @@ export default function ProductInformationPage() {
           <div className="card-body">
             <p className="text-small text-muted mb-3">Please click on the relevant categories you wish to be listed under:</p>
 
+            {formLocked && <LockNote />}
             {error && <div className="alert alert-danger mb-3">{error}</div>}
 
             <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
@@ -216,7 +226,7 @@ export default function ProductInformationPage() {
                                 cursor: "pointer"
                               }}
                             >
-                              <input type="checkbox" checked={selected.has(sub.id)} onChange={() => toggleSubcategory(sub.id)} style={{ flexShrink: 0 }} />
+                              <input type="checkbox" checked={selected.has(sub.id)} onChange={() => toggleSubcategory(sub.id)} disabled={formLocked} style={{ flexShrink: 0 }} />
                               <span className="text-xs">{sub.name}</span>
                             </label>
                           ))}
@@ -229,7 +239,7 @@ export default function ProductInformationPage() {
               {othersSubcategory && (
                 <div style={{ border: "1px solid var(--ez-border)", borderRadius: "var(--ez-border-radius-lg)", padding: "1rem 1.125rem" }}>
                   <label className="d-flex align-center gap-1" style={{ cursor: "pointer" }}>
-                    <input type="checkbox" checked={isOthersSelected} onChange={() => toggleSubcategory(othersSubcategory.id)} />
+                    <input type="checkbox" checked={isOthersSelected} onChange={() => toggleSubcategory(othersSubcategory.id)} disabled={formLocked} />
                     <span className="fw-600 text-small" style={{ color: "var(--ez-dark)" }}>
                       Others
                     </span>
@@ -239,7 +249,7 @@ export default function ProductInformationPage() {
                       <label className="form-label">
                         If others, please specify <span style={{ color: "var(--ez-danger)" }}>*</span>
                       </label>
-                      <textarea className="form-control" rows={2} value={otherText} onChange={(e) => setOtherText(e.target.value)} />
+                      <textarea className="form-control" rows={2} value={otherText} onChange={(e) => setOtherText(e.target.value)} disabled={formLocked} />
                     </div>
                   )}
                 </div>
@@ -247,7 +257,7 @@ export default function ProductInformationPage() {
             </div>
 
             <form onSubmit={handleSubmit}>
-              <button type="submit" className="btn btn-primary" style={{ marginTop: "1.5rem" }} disabled={submitting}>
+              <button type="submit" className="btn btn-primary" style={{ marginTop: "1.5rem" }} disabled={submitting || formLocked}>
                 {submitting ? "Saving..." : "Submit"}
               </button>
             </form>
@@ -266,7 +276,13 @@ export default function ProductInformationPage() {
                 {selectedItems.map((item) => (
                   <div key={item.id} className="d-flex justify-between align-center" style={{ padding: "0.5rem 0.75rem", background: "var(--ez-bg-body)", borderRadius: "var(--ez-border-radius)" }}>
                     <span className="text-xs">{item.name}</span>
-                    <button type="button" className="btn btn-ghost btn-icon btn-sm" style={{ color: "var(--ez-danger)" }} onClick={() => toggleSubcategory(item.id)}>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-icon btn-sm"
+                      style={{ color: "var(--ez-danger)" }}
+                      onClick={() => toggleSubcategory(item.id)}
+                      disabled={formLocked}
+                    >
                       <i className="bx bx-x" />
                     </button>
                   </div>
