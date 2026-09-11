@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { api, ApiError } from "./apiClient";
 
-export type ExhibitorRole = "super_admin" | "organiser" | "finance" | "exhibitor_admin" | "exhibitor_staff";
+export type ExhibitorRole = "super_admin" | "organiser" | "finance" | "exhibitor_admin" | "exhibitor_staff" | "operations" | "sales";
 
 export interface SessionUser {
   id: number;
@@ -14,6 +14,9 @@ export interface SessionUser {
   role: ExhibitorRole;
   companyId: number | null;
   eventId: number | null;
+  // Only meaningful for role "operations"/"sales" — the admin nav uses this
+  // to hide modules the account hasn't been granted. Empty/ignored otherwise.
+  enabledModules: string[];
 }
 
 interface SessionContextValue {
@@ -65,10 +68,18 @@ export function useSession() {
   return ctx;
 }
 
-export const ADMIN_TIER_ROLES: ExhibitorRole[] = ["super_admin", "organiser", "finance"];
+export const ADMIN_TIER_ROLES: ExhibitorRole[] = ["super_admin", "organiser", "finance", "operations", "sales"];
 
 export function isAdminTier(role: ExhibitorRole | undefined) {
   return Boolean(role && ADMIN_TIER_ROLES.includes(role));
+}
+
+// Only operations/sales are restricted to their enabledModules list — every
+// other admin-tier role always has full access to every admin nav item.
+export const MODULE_GATED_ROLES: ExhibitorRole[] = ["operations", "sales"];
+
+export function isModuleGated(role: ExhibitorRole | undefined) {
+  return Boolean(role && MODULE_GATED_ROLES.includes(role));
 }
 
 export { ApiError };

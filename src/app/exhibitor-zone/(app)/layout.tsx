@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession, isAdminTier } from "../_lib/SessionProvider";
+import { useSession, isAdminTier, isModuleGated } from "../_lib/SessionProvider";
 import { api } from "../_lib/apiClient";
 import Sidebar, { type NavItem } from "../_components/Sidebar";
 import Topbar from "../_components/Topbar";
@@ -67,6 +67,32 @@ const ADMIN_NAV: NavItem[] = [
   { label: "Admin Users", href: "/exhibitor-zone/admin/users", icon: "bx-user-circle" }
 ];
 
+// Maps each admin nav href to the module key it's gated by on the backend
+// (see backend/src/config/adminModules.js) — only consulted for
+// operations/sales accounts; every other admin-tier role sees every item.
+// Admin Users and Legacy Import have no entry here because they're never
+// assignable to operations/sales — the backend restricts both to super_admin
+// regardless of enabledModules, so the links stay hidden for those roles too.
+const NAV_HREF_TO_MODULE: Record<string, string> = {
+  "/exhibitor-zone/admin/dashboard": "dashboard",
+  "/exhibitor-zone/admin/events": "events",
+  "/exhibitor-zone/admin/registrations": "registrations",
+  "/exhibitor-zone/admin/companies": "companies",
+  "/exhibitor-zone/admin/exhibitor-progress": "exhibitor-progress",
+  "/exhibitor-zone/admin/stalls": "stalls",
+  "/exhibitor-zone/admin/catalogue": "catalogue",
+  "/exhibitor-zone/admin/carts": "carts",
+  "/exhibitor-zone/admin/orders": "orders",
+  "/exhibitor-zone/admin/payments": "payments",
+  "/exhibitor-zone/admin/passes": "passes",
+  "/exhibitor-zone/admin/mandatory-forms": "mandatory-forms",
+  "/exhibitor-zone/admin/services": "services",
+  "/exhibitor-zone/admin/forms": "forms",
+  "/exhibitor-zone/admin/documents": "documents",
+  "/exhibitor-zone/admin/notifications": "notifications",
+  "/exhibitor-zone/admin/exports": "exports"
+};
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useSession();
   const router = useRouter();
@@ -121,6 +147,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       // backend restricts it to super_admin only, so hide the link for
       // organiser/finance admins rather than showing a link that 403s.
       if (item.href === "/exhibitor-zone/admin/legacy-import" && user.role !== "super_admin") return false;
+      if (item.href === "/exhibitor-zone/admin/users" && user.role !== "super_admin") return false;
+      // Operations/sales only see the admin modules their account was
+      // granted — everyone else (super_admin/organiser/finance) sees every item.
+      if (admin && isModuleGated(user.role) && item.href) {
+        const moduleKey = NAV_HREF_TO_MODULE[item.href];
+        if (moduleKey && !user.enabledModules.includes(moduleKey)) return false;
+      }
       if (admin || !item.href || !activeServiceSlugs) return true;
       const match = item.href.match(/^\/exhibitor-zone\/services\/([^/]+)$/);
       // Only slugs with a form_templates row participate in the admin
