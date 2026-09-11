@@ -14,6 +14,15 @@ interface MandatoryForm {
   description: string | null;
   status: "pending" | "in_progress" | "completed";
   completed_at: string | null;
+  applicable: boolean;
+}
+
+interface FormDefinition {
+  id: number;
+  form_key: string;
+  name: string;
+  description: string | null;
+  is_active: number;
 }
 
 const STATUS_ICON: Record<MandatoryForm["status"], string> = {
@@ -21,6 +30,12 @@ const STATUS_ICON: Record<MandatoryForm["status"], string> = {
   in_progress: "bx-time-five",
   completed: "bx-check-circle"
 };
+
+// Booth Design Submission and Fascia Name Submission are mutually exclusive —
+// which one applies depends on booth_type (Raw Space vs Shell Space). Once
+// booth_type is known, exactly one of the two should show, exactly like the
+// exhibitor's own Mandatory Forms list.
+const BOOTH_TYPE_PAIR = ["booth-design-submission", "fascia-name-submission"];
 
 export default function AdminExhibitorProgressDetailPage({ params }: { params: Promise<{ profileId: string }> }) {
   const { profileId } = use(params);
@@ -30,9 +45,36 @@ export default function AdminExhibitorProgressDetailPage({ params }: { params: P
   const [error, setError] = useState("");
 
   useEffect(() => {
-    api
-      .get<{ forms: MandatoryForm[] }>(`/mandatory-forms/status/${profileId}`)
-      .then((body) => setForms(body.forms))
+    // /status/:profileId only returns forms currently applicable to this
+    // exhibitor (e.g. Booth Design only shows once booth_type is known to be
+    // Raw Space) — merged here with the full definition list so an admin can
+    // still open and fill in a form that isn't "applicable" yet, rather than
+    // being blocked from ever setting it up in the first place.
+    Promise.all([
+      api.get<{ forms: Omit<MandatoryForm, "applicable">[] }>(`/mandatory-forms/status/${profileId}`),
+      api.get<{ definitions: FormDefinition[] }>("/mandatory-forms/admin/definitions")
+    ])
+      .then(([statusBody, defsBody]) => {
+        const byKey = new Map(statusBody.forms.map((f) => [f.form_key, f]));
+        const merged: MandatoryForm[] = defsBody.definitions
+          .filter((d) => d.is_active)
+          .filter((d) => {
+            // Booth type is known (one of the pair is already applicable) —
+            // drop the other one entirely instead of showing both.
+            if (BOOTH_TYPE_PAIR.includes(d.form_key) && !byKey.has(d.form_key)) {
+              const counterpart = BOOTH_TYPE_PAIR.find((k) => k !== d.form_key);
+              if (counterpart && byKey.has(counterpart)) return false;
+            }
+            return true;
+          })
+          .map((d) => {
+            const known = byKey.get(d.form_key);
+            return known
+              ? { ...known, applicable: true }
+              : { id: d.id, form_key: d.form_key, name: d.name, description: d.description, status: "pending", completed_at: null, applicable: false };
+          });
+        setForms(merged);
+      })
       .catch((err) => setError(err instanceof ApiError ? err.message : "Failed to load form progress."))
       .finally(() => setLoading(false));
   }, [profileId]);
@@ -96,9 +138,20 @@ export default function AdminExhibitorProgressDetailPage({ params }: { params: P
                       </div>
                       {form.description && <div className="text-xs text-muted">{form.description}</div>}
                       {form.completed_at && <div className="text-xs text-muted">Completed {formatDate(form.completed_at)}</div>}
+                      {!form.applicable && (
+                        <div className="text-xs text-muted">Not yet applicable (booth type not set) — you can still fill it in as admin.</div>
+                      )}
                     </div>
                   </div>
-                  <StatusBadge status={form.status} />
+                  <div className="d-flex align-center gap-2">
+                    <StatusBadge status={form.status} />
+                    <Link
+                      href={`/exhibitor-zone/mandatory-forms/${form.form_key}?profileId=${profileId}&company=${encodeURIComponent(companyName)}`}
+                      className="btn btn-sm btn-outline-primary"
+                    >
+                      {form.status === "completed" ? "Edit" : "Fill In"}
+                    </Link>
+                  </div>
                 </div>
               </div>
             ))}

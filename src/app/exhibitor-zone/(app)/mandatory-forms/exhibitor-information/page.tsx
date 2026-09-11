@@ -3,6 +3,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "../../../_lib/apiClient";
+import { useAdminProfileParam, withProfileId } from "../../../_lib/adminProfile";
+import AdminEditingBanner from "../../../_components/AdminEditingBanner";
 import { countries, findCountry } from "@/data/countries";
 
 const HALL_OPTIONS = ["Hall 1", "Hall 2", "Hall 3", "Hall 4", "Hall 5"];
@@ -32,6 +34,7 @@ interface ExistingInfo {
   contact_designation: string | null;
   contact_phone: string | null;
   contact_alternate_email: string | null;
+  locked_fields: string[];
 }
 
 interface FormState {
@@ -80,8 +83,18 @@ const initialForm: FormState = {
   contactAlternateEmail: ""
 };
 
+function LockNote() {
+  return (
+    <div className="form-text" style={{ color: "var(--ez-text-muted, #6b7280)" }}>
+      🔒 Locked — set during registration. Contact your organiser to change this.
+    </div>
+  );
+}
+
 export default function ExhibitorInformationPage() {
   const router = useRouter();
+  const { profileId, company } = useAdminProfileParam();
+  const navSuffix = profileId ? `?profileId=${profileId}&company=${encodeURIComponent(company)}` : "";
   const [form, setForm] = useState<FormState>(initialForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -94,10 +107,18 @@ export default function ExhibitorInformationPage() {
   const [logoExistingLabel, setLogoExistingLabel] = useState("");
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoError, setLogoError] = useState("");
+  const [lockedFields, setLockedFields] = useState<string[]>([]);
+
+  // A field imported/set by an admin stays locked for the exhibitor's own
+  // view of this form — admin editing mode (?profileId=) is never locked out
+  // of anything, matching what the backend enforces.
+  function isLocked(field: string) {
+    return !profileId && lockedFields.includes(field);
+  }
 
   useEffect(() => {
     api
-      .get<{ info: ExistingInfo | null }>("/mandatory-forms/exhibitor-information")
+      .get<{ info: ExistingInfo | null }>(withProfileId("/mandatory-forms/exhibitor-information", profileId))
       .then((body) => {
         if (body.info) {
           setForm({
@@ -126,11 +147,12 @@ export default function ExhibitorInformationPage() {
             setLogoDocumentId(body.info.company_logo_document_id);
             setLogoExistingLabel("Previously uploaded logo");
           }
+          setLockedFields(body.info.locked_fields || []);
         }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [profileId]);
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -164,6 +186,7 @@ export default function ExhibitorInformationPage() {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("documentType", "company_logo");
+      if (profileId) formData.append("exhibitorProfileId", String(profileId));
       const body = await api.post<{ documentId: number }>("/documents", formData);
       setLogoDocumentId(body.documentId);
       setLogoExistingLabel("");
@@ -212,7 +235,7 @@ export default function ExhibitorInformationPage() {
 
     setSubmitting(true);
     try {
-      await api.patch("/mandatory-forms/exhibitor-information", {
+      await api.patch(withProfileId("/mandatory-forms/exhibitor-information", profileId), {
         companyName: form.companyName.trim(),
         brandName: form.brandName.trim(),
         hallNo: form.hallNo || undefined,
@@ -236,9 +259,9 @@ export default function ExhibitorInformationPage() {
         contactAlternateEmail: form.contactAlternateEmail.trim() || undefined
       });
       if (form.boothType === "Raw Space") {
-        router.push("/exhibitor-zone/mandatory-forms/booth-design-submission");
+        router.push(`/exhibitor-zone/mandatory-forms/booth-design-submission${navSuffix}`);
       } else if (form.boothType === "Shell Space") {
-        router.push("/exhibitor-zone/mandatory-forms/fascia-name-submission");
+        router.push(`/exhibitor-zone/mandatory-forms/fascia-name-submission${navSuffix}`);
       } else {
         setDone(true);
       }
@@ -264,8 +287,12 @@ export default function ExhibitorInformationPage() {
           <i className="bx bx-check-circle" style={{ fontSize: "3rem", color: "var(--ez-success)" }} />
           <h3 style={{ marginTop: "1rem", marginBottom: "0.5rem", color: "var(--ez-dark)" }}>Exhibitor Information saved</h3>
           <p className="text-muted text-small mb-4">This form is now marked as completed.</p>
-          <button type="button" className="btn btn-primary w-100" onClick={() => router.push("/exhibitor-zone/mandatory-forms")}>
-            Back to Mandatory Forms
+          <button
+            type="button"
+            className="btn btn-primary w-100"
+            onClick={() => router.push(profileId ? `/exhibitor-zone/admin/exhibitor-progress/${profileId}?company=${encodeURIComponent(company)}` : "/exhibitor-zone/mandatory-forms")}
+          >
+            {profileId ? "Back to Exhibitor Progress" : "Back to Mandatory Forms"}
           </button>
         </div>
       </div>
@@ -281,6 +308,8 @@ export default function ExhibitorInformationPage() {
         <p className="content-subtitle">Fill this form to proceed</p>
       </div>
 
+      {profileId && <AdminEditingBanner profileId={profileId} company={company} />}
+
       <div className="alert alert-warning mb-3">
         <i className="bx bx-time-five" />
         <span className="text-small">Please note: Last date of submission is 7th March 2026, post which no forms will be entertained.</span>
@@ -289,6 +318,13 @@ export default function ExhibitorInformationPage() {
         <i className="bx bx-info-circle" />
         <span className="text-small">Important: The submitted information may be published in the official exhibition directory and website.</span>
       </div>
+
+      {!profileId && lockedFields.length > 0 && (
+        <div className="alert alert-warning mb-3">
+          <i className="bx bx-lock-alt" />
+          <span className="text-small">Some fields below (marked 🔒) were set during your company&apos;s registration and can only be changed by the event organiser.</span>
+        </div>
+      )}
 
       {apiError && <div className="alert alert-danger mb-3">{apiError}</div>}
 
@@ -307,22 +343,34 @@ export default function ExhibitorInformationPage() {
                 <label className="form-label">
                   Company Name <span style={{ color: "var(--ez-danger)" }}>*</span>
                 </label>
-                <input className={`form-control ${errors.companyName ? "is-invalid" : ""}`} value={form.companyName} onChange={(e) => setField("companyName", e.target.value)} />
+                <input
+                  className={`form-control ${errors.companyName ? "is-invalid" : ""}`}
+                  value={form.companyName}
+                  onChange={(e) => setField("companyName", e.target.value)}
+                  disabled={isLocked("company_name")}
+                />
                 {errors.companyName && <div className="invalid-feedback d-block">{errors.companyName}</div>}
+                {isLocked("company_name") && <LockNote />}
               </div>
               <div className="form-group">
                 <label className="form-label">
                   Brand Name <span style={{ color: "var(--ez-danger)" }}>*</span>
                 </label>
-                <input className={`form-control ${errors.brandName ? "is-invalid" : ""}`} value={form.brandName} onChange={(e) => setField("brandName", e.target.value)} />
+                <input
+                  className={`form-control ${errors.brandName ? "is-invalid" : ""}`}
+                  value={form.brandName}
+                  onChange={(e) => setField("brandName", e.target.value)}
+                  disabled={isLocked("brand_name")}
+                />
                 {errors.brandName && <div className="invalid-feedback d-block">{errors.brandName}</div>}
+                {isLocked("brand_name") && <LockNote />}
               </div>
             </div>
 
             <div className="grid grid-2">
               <div className="form-group">
                 <label className="form-label">Hall No.</label>
-                <select className="form-control form-select" value={form.hallNo} onChange={(e) => setField("hallNo", e.target.value)}>
+                <select className="form-control form-select" value={form.hallNo} onChange={(e) => setField("hallNo", e.target.value)} disabled={isLocked("hall_no")}>
                   <option value="">Select Hall</option>
                   {HALL_OPTIONS.map((h) => (
                     <option key={h} value={h}>
@@ -330,6 +378,7 @@ export default function ExhibitorInformationPage() {
                     </option>
                   ))}
                 </select>
+                {isLocked("hall_no") && <LockNote />}
               </div>
               <div className="form-group">
                 <label className="form-label">Zone</label>
@@ -345,13 +394,25 @@ export default function ExhibitorInformationPage() {
             <div className="grid grid-2">
               <div className="form-group">
                 <label className="form-label">Booth No.</label>
-                <input className="form-control" value={form.boothNo} onChange={(e) => setField("boothNo", e.target.value)} placeholder="e.g. A-101" />
+                <input
+                  className="form-control"
+                  value={form.boothNo}
+                  onChange={(e) => setField("boothNo", e.target.value)}
+                  placeholder="e.g. A-101"
+                  disabled={isLocked("booth_no")}
+                />
+                {isLocked("booth_no") && <LockNote />}
               </div>
               <div className="form-group">
                 <label className="form-label">
                   Booth Type <span style={{ color: "var(--ez-danger)" }}>*</span>
                 </label>
-                <select className={`form-control form-select ${errors.boothType ? "is-invalid" : ""}`} value={form.boothType} onChange={(e) => setField("boothType", e.target.value)}>
+                <select
+                  className={`form-control form-select ${errors.boothType ? "is-invalid" : ""}`}
+                  value={form.boothType}
+                  onChange={(e) => setField("boothType", e.target.value)}
+                  disabled={isLocked("booth_type")}
+                >
                   <option value="">Select Booth</option>
                   {BOOTH_TYPE_OPTIONS.map((o) => (
                     <option key={o} value={o}>
@@ -360,6 +421,7 @@ export default function ExhibitorInformationPage() {
                   ))}
                 </select>
                 {errors.boothType && <div className="invalid-feedback d-block">{errors.boothType}</div>}
+                {isLocked("booth_type") && <LockNote />}
               </div>
             </div>
 
@@ -421,7 +483,12 @@ export default function ExhibitorInformationPage() {
                 <label className="form-label">
                   Country <span style={{ color: "var(--ez-danger)" }}>*</span>
                 </label>
-                <select className={`form-control form-select ${errors.country ? "is-invalid" : ""}`} value={form.country} onChange={(e) => handleCountryChange(e.target.value)}>
+                <select
+                  className={`form-control form-select ${errors.country ? "is-invalid" : ""}`}
+                  value={form.country}
+                  onChange={(e) => handleCountryChange(e.target.value)}
+                  disabled={isLocked("country")}
+                >
                   <option value="">Choose a Country</option>
                   {countries.map((c) => (
                     <option key={c.code} value={c.name}>
@@ -430,6 +497,7 @@ export default function ExhibitorInformationPage() {
                   ))}
                 </select>
                 {errors.country && <div className="invalid-feedback d-block">{errors.country}</div>}
+                {isLocked("country") && <LockNote />}
               </div>
               <div className="form-group">
                 <label className="form-label">Country Code</label>
@@ -446,20 +514,36 @@ export default function ExhibitorInformationPage() {
                   maxLength={10}
                   value={form.phoneNo}
                   onChange={(e) => setField("phoneNo", e.target.value.replace(/[^0-9]/g, "").slice(0, 10))}
+                  disabled={isLocked("phone_no")}
                 />
+                {isLocked("phone_no") && <LockNote />}
               </div>
               <div className="form-group">
                 <label className="form-label">
                   Email <span style={{ color: "var(--ez-danger)" }}>*</span>
                 </label>
-                <input type="email" className={`form-control ${errors.email ? "is-invalid" : ""}`} value={form.email} onChange={(e) => setField("email", e.target.value)} />
+                <input
+                  type="email"
+                  className={`form-control ${errors.email ? "is-invalid" : ""}`}
+                  value={form.email}
+                  onChange={(e) => setField("email", e.target.value)}
+                  disabled={isLocked("email")}
+                />
                 {errors.email && <div className="invalid-feedback d-block">{errors.email}</div>}
+                {isLocked("email") && <LockNote />}
               </div>
             </div>
 
             <div className="form-group">
               <label className="form-label">Website</label>
-              <input className="form-control" value={form.website} onChange={(e) => setField("website", e.target.value)} placeholder="https://example.com" />
+              <input
+                className="form-control"
+                value={form.website}
+                onChange={(e) => setField("website", e.target.value)}
+                placeholder="https://example.com"
+                disabled={isLocked("website")}
+              />
+              {isLocked("website") && <LockNote />}
             </div>
 
             <div className="form-group">
@@ -472,6 +556,7 @@ export default function ExhibitorInformationPage() {
                 maxLength={PROFILE_MAX_LENGTH}
                 value={form.companyProfile}
                 onChange={(e) => setField("companyProfile", e.target.value.slice(0, PROFILE_MAX_LENGTH))}
+                disabled={isLocked("company_profile")}
               />
               <div className="d-flex justify-between mt-1">
                 {errors.companyProfile ? (
@@ -483,6 +568,7 @@ export default function ExhibitorInformationPage() {
                 )}
                 <span className="text-xs text-muted">No. of characters left: {charsLeft}</span>
               </div>
+              {isLocked("company_profile") && <LockNote />}
             </div>
 
             <div className="form-group">
@@ -522,11 +608,18 @@ export default function ExhibitorInformationPage() {
             <div className="grid grid-2">
               <div className="form-group">
                 <label className="form-label">Name</label>
-                <input className="form-control" value={form.contactName} onChange={(e) => setField("contactName", e.target.value)} />
+                <input className="form-control" value={form.contactName} onChange={(e) => setField("contactName", e.target.value)} disabled={isLocked("contact_name")} />
+                {isLocked("contact_name") && <LockNote />}
               </div>
               <div className="form-group">
                 <label className="form-label">Designation</label>
-                <input className="form-control" value={form.contactDesignation} onChange={(e) => setField("contactDesignation", e.target.value)} />
+                <input
+                  className="form-control"
+                  value={form.contactDesignation}
+                  onChange={(e) => setField("contactDesignation", e.target.value)}
+                  disabled={isLocked("contact_designation")}
+                />
+                {isLocked("contact_designation") && <LockNote />}
               </div>
             </div>
 

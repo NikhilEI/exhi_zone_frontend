@@ -4,6 +4,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "../../../_lib/apiClient";
 import { useMandatoryFormGate } from "../../../_lib/useMandatoryFormGate";
+import { useAdminProfileParam, withProfileId } from "../../../_lib/adminProfile";
+import AdminEditingBanner from "../../../_components/AdminEditingBanner";
 
 const GUIDELINE_LINK = "https://www.convergenceindia.org/exhibitor-zone/guidelines-for-sound-noise-level.aspx";
 
@@ -25,6 +27,7 @@ interface Acknowledgement {
 export default function SoundNoiseGuidelinesPage() {
   const router = useRouter();
   const gateOk = useMandatoryFormGate();
+  const { profileId, company } = useAdminProfileParam();
   const [acknowledged, setAcknowledged] = useState(false);
   const [checkboxChecked, setCheckboxChecked] = useState(false);
   const [checkboxError, setCheckboxError] = useState("");
@@ -35,7 +38,7 @@ export default function SoundNoiseGuidelinesPage() {
 
   useEffect(() => {
     api
-      .get<{ acknowledgement: Acknowledgement | null }>("/mandatory-forms/sound-noise-guidelines")
+      .get<{ acknowledgement: Acknowledgement | null }>(withProfileId("/mandatory-forms/sound-noise-guidelines", profileId))
       .then((body) => {
         if (body.acknowledgement?.acknowledged) {
           setAcknowledged(true);
@@ -44,7 +47,7 @@ export default function SoundNoiseGuidelinesPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [profileId]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -58,7 +61,7 @@ export default function SoundNoiseGuidelinesPage() {
 
     setSubmitting(true);
     try {
-      await api.patch("/mandatory-forms/sound-noise-guidelines", { acknowledged: true });
+      await api.patch(withProfileId("/mandatory-forms/sound-noise-guidelines", profileId), { acknowledged: true });
       setAcknowledged(true);
       setDone(true);
     } catch (err) {
@@ -83,8 +86,12 @@ export default function SoundNoiseGuidelinesPage() {
           <i className="bx bx-check-circle" style={{ fontSize: "3rem", color: "var(--ez-success)" }} />
           <h3 style={{ marginTop: "1rem", marginBottom: "0.5rem", color: "var(--ez-dark)" }}>Sound &amp; Noise Level Guidelines acknowledged</h3>
           <p className="text-muted text-small mb-4">This form is now marked as completed.</p>
-          <button type="button" className="btn btn-primary w-100" onClick={() => router.push("/exhibitor-zone/mandatory-forms")}>
-            Back to Mandatory Forms
+          <button
+            type="button"
+            className="btn btn-primary w-100"
+            onClick={() => router.push(profileId ? `/exhibitor-zone/admin/exhibitor-progress/${profileId}?company=${encodeURIComponent(company)}` : "/exhibitor-zone/mandatory-forms")}
+          >
+            {profileId ? "Back to Exhibitor Progress" : "Back to Mandatory Forms"}
           </button>
         </div>
       </div>
@@ -97,6 +104,8 @@ export default function SoundNoiseGuidelinesPage() {
         <h1 className="content-title">Sound &amp; Noise Level Guidelines</h1>
         <p className="content-subtitle">Please note: Last date of submission is 7th March 2027, post which no forms will be entertained.</p>
       </div>
+
+      {profileId && <AdminEditingBanner profileId={profileId} company={company} />}
 
       <div className="alert alert-warning mb-3">
         <i className="bx bx-volume-full" />

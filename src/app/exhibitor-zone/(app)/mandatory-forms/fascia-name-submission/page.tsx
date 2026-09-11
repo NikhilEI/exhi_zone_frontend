@@ -4,6 +4,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "../../../_lib/apiClient";
 import { useMandatoryFormGate } from "../../../_lib/useMandatoryFormGate";
+import { useAdminProfileParam, withProfileId } from "../../../_lib/adminProfile";
+import AdminEditingBanner from "../../../_components/AdminEditingBanner";
 import { formatDate } from "../../../_lib/format";
 import StatusBadge from "../../../_components/StatusBadge";
 
@@ -23,7 +25,8 @@ interface Submission {
 export default function FasciaNameSubmissionPage() {
   const router = useRouter();
   const gateOk = useMandatoryFormGate();
-  const [eligible, setEligible] = useState<boolean | null>(null);
+  const { profileId, company } = useAdminProfileParam();
+  const [eligible, setEligible] = useState<boolean | null>(profileId ? true : null);
   const [existing, setExisting] = useState<Submission | null>(null);
   const [fasciaName, setFasciaName] = useState("");
   const [error, setError] = useState("");
@@ -33,13 +36,18 @@ export default function FasciaNameSubmissionPage() {
   const [savedMessage, setSavedMessage] = useState("");
 
   useEffect(() => {
-    api
-      .get<{ info: { booth_type: string } | null }>("/mandatory-forms/exhibitor-information")
-      .then((body) => setEligible(body.info?.booth_type === "Shell Space"))
-      .catch(() => setEligible(false));
+    // Admin editing on behalf of an exhibitor bypasses the Shell-Space-only
+    // eligibility check (already reflected in the initial useState above) —
+    // see booth-design-submission for the same reasoning.
+    if (!profileId) {
+      api
+        .get<{ info: { booth_type: string } | null }>("/mandatory-forms/exhibitor-information")
+        .then((body) => setEligible(body.info?.booth_type === "Shell Space"))
+        .catch(() => setEligible(false));
+    }
 
     api
-      .get<{ submissions: Submission[] }>("/forms/submissions")
+      .get<{ submissions: Submission[] }>(withProfileId("/forms/submissions", profileId))
       .then((body) => {
         const found = body.submissions.find((s) => s.template_slug === "fascia-name-submission") || null;
         setExisting(found);
@@ -47,7 +55,7 @@ export default function FasciaNameSubmissionPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [profileId]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -62,8 +70,8 @@ export default function FasciaNameSubmissionPage() {
 
     setSubmitting(true);
     try {
-      await api.post("/forms/submissions/fascia-name-submission", { fasciaName: fasciaName.trim() });
-      const body = await api.get<{ submissions: Submission[] }>("/forms/submissions");
+      await api.post(withProfileId("/forms/submissions/fascia-name-submission", profileId), { fasciaName: fasciaName.trim() });
+      const body = await api.get<{ submissions: Submission[] }>(withProfileId("/forms/submissions", profileId));
       const saved = body.submissions.find((s) => s.template_slug === "fascia-name-submission") || null;
       setExisting(saved);
       setSavedMessage(saved ? `Saved — Version v${saved.version} submitted on ${formatDate(saved.created_at)}.` : "Saved.");
@@ -105,6 +113,8 @@ export default function FasciaNameSubmissionPage() {
         <h1 className="content-title">Fascia Name Submission</h1>
         <p className="content-subtitle">Please note: Last date of submission is 7th March 2027, post which no forms will be entertained.</p>
       </div>
+
+      {profileId && <AdminEditingBanner profileId={profileId} company={company} />}
 
       <div className="alert alert-info mb-3">
         <i className="bx bx-info-circle" />

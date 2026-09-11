@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 import { api } from "./apiClient";
+import { useAdminProfileParam } from "./adminProfile";
 
 export const EXHIBITOR_INFO_FORM_KEY = "exhibitor-information";
 
@@ -26,13 +27,17 @@ interface MandatoryFormSummary {
 export function useMandatoryFormGate() {
   const pathname = usePathname();
   const router = useRouter();
+  const { profileId } = useAdminProfileParam();
   const formKey = pathname.split("/").filter(Boolean).pop() || "";
   const isExhibitorInfoForm = formKey === EXHIBITOR_INFO_FORM_KEY;
-  const [allowed, setAllowed] = useState(isExhibitorInfoForm);
+  const [allowed, setAllowed] = useState(isExhibitorInfoForm || Boolean(profileId));
 
   useEffect(() => {
-    if (isExhibitorInfoForm) {
-      // Already initialized to true above — nothing to check.
+    // Admin editing on behalf of an exhibitor (?profileId=...) always has
+    // full access — the "finish Exhibitor Information first" nudge is for
+    // exhibitors filling their own forms in order, not for staff fixing data.
+    // Both cases are already reflected in the initial useState value above.
+    if (isExhibitorInfoForm || profileId) {
       return;
     }
 
@@ -66,7 +71,7 @@ export function useMandatoryFormGate() {
     return () => {
       cancelled = true;
     };
-  }, [isExhibitorInfoForm, router]);
+  }, [isExhibitorInfoForm, profileId, router]);
 
   return allowed;
 }

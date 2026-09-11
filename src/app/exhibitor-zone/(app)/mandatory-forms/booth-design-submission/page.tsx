@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "../../../_lib/apiClient";
 import { useMandatoryFormGate } from "../../../_lib/useMandatoryFormGate";
+import { useAdminProfileParam, withProfileId } from "../../../_lib/adminProfile";
+import AdminEditingBanner from "../../../_components/AdminEditingBanner";
 import { formatDate } from "../../../_lib/format";
 import StatusBadge from "../../../_components/StatusBadge";
 
@@ -62,7 +64,8 @@ const initialForm: FormState = { standContractor: "", attachDesign: "Yes" };
 export default function BoothDesignSubmissionPage() {
   const router = useRouter();
   const gateOk = useMandatoryFormGate();
-  const [eligible, setEligible] = useState<boolean | null>(null);
+  const { profileId, company } = useAdminProfileParam();
+  const [eligible, setEligible] = useState<boolean | null>(profileId ? true : null);
   const [existing, setExisting] = useState<Submission | null>(null);
   const [form, setForm] = useState<FormState>(initialForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -81,13 +84,19 @@ export default function BoothDesignSubmissionPage() {
   const [designError, setDesignError] = useState("");
 
   useEffect(() => {
-    api
-      .get<{ info: { booth_type: string } | null }>("/mandatory-forms/exhibitor-information")
-      .then((body) => setEligible(body.info?.booth_type === "Raw Space"))
-      .catch(() => setEligible(false));
+    // Admin editing on behalf of an exhibitor bypasses the Raw-Space-only
+    // eligibility check (already reflected in the initial useState above) —
+    // they may be filling this in before booth_type is even set, or fixing
+    // a misclassification.
+    if (!profileId) {
+      api
+        .get<{ info: { booth_type: string } | null }>("/mandatory-forms/exhibitor-information")
+        .then((body) => setEligible(body.info?.booth_type === "Raw Space"))
+        .catch(() => setEligible(false));
+    }
 
     api
-      .get<{ submissions: Submission[] }>("/forms/submissions")
+      .get<{ submissions: Submission[] }>(withProfileId("/forms/submissions", profileId))
       .then((body) => {
         const found = body.submissions.find((s) => s.template_slug === "booth-design-submission") || null;
         setExisting(found);
@@ -104,7 +113,7 @@ export default function BoothDesignSubmissionPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [profileId]);
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -126,6 +135,7 @@ export default function BoothDesignSubmissionPage() {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("documentType", "booth_design");
+      if (profileId) formData.append("exhibitorProfileId", String(profileId));
       const body = await api.post<{ documentId: number }>("/documents", formData);
       setDesignDocumentId(body.documentId);
       setDesignExistingLabel("");
@@ -182,14 +192,14 @@ export default function BoothDesignSubmissionPage() {
     setApiError("");
     setSubmitting(true);
     try {
-      await api.post("/forms/submissions/booth-design-submission", {
+      await api.post(withProfileId("/forms/submissions/booth-design-submission", profileId), {
         standContractor: form.standContractor,
         attachDesign: form.attachDesign,
         designDocumentId: form.attachDesign === "Yes" ? designDocumentId : undefined,
         declarationAccepted: true
       });
 
-      const body = await api.get<{ submissions: Submission[] }>("/forms/submissions");
+      const body = await api.get<{ submissions: Submission[] }>(withProfileId("/forms/submissions", profileId));
       const saved = body.submissions.find((s) => s.template_slug === "booth-design-submission") || null;
       setExisting(saved);
       setShowDeclaration(false);
@@ -230,6 +240,8 @@ export default function BoothDesignSubmissionPage() {
         <h1 className="content-title">Booth Design Submission</h1>
         <p className="content-subtitle">It is mandatory for all raw space exhibitors to submit the booth design for approval by 7th March 2027.</p>
       </div>
+
+      {profileId && <AdminEditingBanner profileId={profileId} company={company} />}
 
       <div className="alert alert-info mb-3">
         <i className="bx bx-info-circle" />

@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "../../../_lib/apiClient";
 import { useMandatoryFormGate } from "../../../_lib/useMandatoryFormGate";
+import { useAdminProfileParam, withProfileId } from "../../../_lib/adminProfile";
+import AdminEditingBanner from "../../../_components/AdminEditingBanner";
 import { countries } from "@/data/countries";
 
 const ADD_MORE_VALUE = "__add_more__";
@@ -47,6 +49,7 @@ const initialForm: FormState = {
 export default function PrincipalAgentInformationPage() {
   const router = useRouter();
   const gateOk = useMandatoryFormGate();
+  const { profileId, company } = useAdminProfileParam();
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [records, setRecords] = useState<Record_[]>([]);
   const [noPrincipalAgent, setNoPrincipalAgent] = useState(false);
@@ -62,7 +65,7 @@ export default function PrincipalAgentInformationPage() {
   useEffect(() => {
     Promise.all([
       api.get<{ sectors: Sector[] }>("/mandatory-forms/principal-agent-sectors"),
-      api.get<{ records: Record_[]; noPrincipalAgent: boolean }>("/mandatory-forms/principal-agent-information")
+      api.get<{ records: Record_[]; noPrincipalAgent: boolean }>(withProfileId("/mandatory-forms/principal-agent-information", profileId))
     ])
       .then(([sectorBody, infoBody]) => {
         setSectors(sectorBody.sectors);
@@ -71,7 +74,7 @@ export default function PrincipalAgentInformationPage() {
       })
       .catch((err) => setApiError(err instanceof ApiError ? err.message : "Failed to load Principal/Agent information."))
       .finally(() => setLoading(false));
-  }, []);
+  }, [profileId]);
 
   const isCompleted = records.length > 0 || noPrincipalAgent;
 
@@ -114,7 +117,7 @@ export default function PrincipalAgentInformationPage() {
 
     setSubmitting(true);
     try {
-      const body = await api.post<{ message: string }>("/mandatory-forms/principal-agent-information/records", {
+      const body = await api.post<{ message: string }>(withProfileId("/mandatory-forms/principal-agent-information/records", profileId), {
         type: form.type,
         companyName: form.companyName.trim(),
         website: form.website.trim() || undefined,
@@ -124,7 +127,7 @@ export default function PrincipalAgentInformationPage() {
         customSector: isAddMore ? form.customSector.trim() : undefined
       });
       void body;
-      const refreshed = await api.get<{ records: Record_[]; noPrincipalAgent: boolean }>("/mandatory-forms/principal-agent-information");
+      const refreshed = await api.get<{ records: Record_[]; noPrincipalAgent: boolean }>(withProfileId("/mandatory-forms/principal-agent-information", profileId));
       setRecords(refreshed.records);
       setNoPrincipalAgent(refreshed.noPrincipalAgent);
       setForm(initialForm);
@@ -140,8 +143,8 @@ export default function PrincipalAgentInformationPage() {
     setDeleting(true);
     setApiError("");
     try {
-      await api.delete(`/mandatory-forms/principal-agent-information/records/${deleteTarget.id}`);
-      const refreshed = await api.get<{ records: Record_[]; noPrincipalAgent: boolean }>("/mandatory-forms/principal-agent-information");
+      await api.delete(withProfileId(`/mandatory-forms/principal-agent-information/records/${deleteTarget.id}`, profileId));
+      const refreshed = await api.get<{ records: Record_[]; noPrincipalAgent: boolean }>(withProfileId("/mandatory-forms/principal-agent-information", profileId));
       setRecords(refreshed.records);
       setNoPrincipalAgent(refreshed.noPrincipalAgent);
       setDeleteTarget(null);
@@ -157,7 +160,7 @@ export default function PrincipalAgentInformationPage() {
     setApiError("");
     setDeclarationSaving(true);
     try {
-      await api.patch("/mandatory-forms/principal-agent-information/declaration", { noPrincipalAgent: checked });
+      await api.patch(withProfileId("/mandatory-forms/principal-agent-information/declaration", profileId), { noPrincipalAgent: checked });
       setNoPrincipalAgent(checked);
     } catch (err) {
       setApiError(err instanceof ApiError ? err.message : "Failed to save.");
@@ -182,6 +185,8 @@ export default function PrincipalAgentInformationPage() {
         <h1 className="content-title">Principal / Agent Information</h1>
         <p className="content-subtitle">Please note: Last date of submission is 7th March 2027, post which no forms will be entertained.</p>
       </div>
+
+      {profileId && <AdminEditingBanner profileId={profileId} company={company} />}
 
       <div className="alert alert-info mb-3">
         <i className="bx bx-info-circle" />
@@ -354,8 +359,15 @@ export default function PrincipalAgentInformationPage() {
       )}
 
       <div className="d-flex justify-end" style={{ marginTop: "1.5rem" }}>
-        <button type="button" className="btn btn-primary" disabled={!isCompleted} onClick={() => router.push("/exhibitor-zone/mandatory-forms")}>
-          {isCompleted ? "Done — Back to Mandatory Forms" : "Add at least one record to continue"}
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={!isCompleted}
+          onClick={() =>
+            router.push(profileId ? `/exhibitor-zone/admin/exhibitor-progress/${profileId}?company=${encodeURIComponent(company)}` : "/exhibitor-zone/mandatory-forms")
+          }
+        >
+          {isCompleted ? `Done — Back to ${profileId ? "Exhibitor Progress" : "Mandatory Forms"}` : "Add at least one record to continue"}
         </button>
       </div>
 

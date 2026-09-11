@@ -4,6 +4,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "../../../_lib/apiClient";
 import { useMandatoryFormGate } from "../../../_lib/useMandatoryFormGate";
+import { useAdminProfileParam, withProfileId } from "../../../_lib/adminProfile";
+import AdminEditingBanner from "../../../_components/AdminEditingBanner";
 import { countries, findCountry } from "@/data/countries";
 
 interface BadgeRecord {
@@ -58,6 +60,7 @@ function downloadCsv(records: BadgeRecord[]) {
 export default function BadgesForExhibitorsPage() {
   const router = useRouter();
   const gateOk = useMandatoryFormGate();
+  const { profileId, company } = useAdminProfileParam();
   const [records, setRecords] = useState<BadgeRecord[]>([]);
   const [form, setForm] = useState<FormState>(initialForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -69,11 +72,11 @@ export default function BadgesForExhibitorsPage() {
 
   useEffect(() => {
     api
-      .get<{ records: BadgeRecord[] }>("/mandatory-forms/badges-for-exhibitors")
+      .get<{ records: BadgeRecord[] }>(withProfileId("/mandatory-forms/badges-for-exhibitors", profileId))
       .then((body) => setRecords(body.records))
       .catch((err) => setApiError(err instanceof ApiError ? err.message : "Failed to load badge information."))
       .finally(() => setLoading(false));
-  }, []);
+  }, [profileId]);
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -112,7 +115,7 @@ export default function BadgesForExhibitorsPage() {
 
     setSubmitting(true);
     try {
-      await api.post("/mandatory-forms/badges-for-exhibitors/records", {
+      await api.post(withProfileId("/mandatory-forms/badges-for-exhibitors/records", profileId), {
         fullName: form.fullName.trim(),
         designation: form.designation.trim(),
         companyName: form.companyName.trim(),
@@ -121,7 +124,7 @@ export default function BadgesForExhibitorsPage() {
         mobileNo: form.mobileNo.trim(),
         email: form.email.trim()
       });
-      const refreshed = await api.get<{ records: BadgeRecord[] }>("/mandatory-forms/badges-for-exhibitors");
+      const refreshed = await api.get<{ records: BadgeRecord[] }>(withProfileId("/mandatory-forms/badges-for-exhibitors", profileId));
       setRecords(refreshed.records);
       setForm(initialForm);
     } catch (err) {
@@ -136,8 +139,8 @@ export default function BadgesForExhibitorsPage() {
     setDeleting(true);
     setApiError("");
     try {
-      await api.delete(`/mandatory-forms/badges-for-exhibitors/records/${deleteTarget.id}`);
-      const refreshed = await api.get<{ records: BadgeRecord[] }>("/mandatory-forms/badges-for-exhibitors");
+      await api.delete(withProfileId(`/mandatory-forms/badges-for-exhibitors/records/${deleteTarget.id}`, profileId));
+      const refreshed = await api.get<{ records: BadgeRecord[] }>(withProfileId("/mandatory-forms/badges-for-exhibitors", profileId));
       setRecords(refreshed.records);
       setDeleteTarget(null);
     } catch (err) {
@@ -161,6 +164,8 @@ export default function BadgesForExhibitorsPage() {
         <h1 className="content-title">Badges for Exhibitors</h1>
         <p className="content-subtitle">Please note: Last date of submission is 7th March 2027, post which no forms will be entertained.</p>
       </div>
+
+      {profileId && <AdminEditingBanner profileId={profileId} company={company} />}
 
       <div className="alert alert-info mb-3">
         <i className="bx bx-info-circle" />
@@ -320,8 +325,15 @@ export default function BadgesForExhibitorsPage() {
       </div>
 
       <div className="d-flex justify-end" style={{ marginTop: "1.5rem" }}>
-        <button type="button" className="btn btn-primary" disabled={records.length === 0} onClick={() => router.push("/exhibitor-zone/mandatory-forms")}>
-          {records.length > 0 ? "Done — Back to Mandatory Forms" : "Add at least one badge to continue"}
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={records.length === 0}
+          onClick={() =>
+            router.push(profileId ? `/exhibitor-zone/admin/exhibitor-progress/${profileId}?company=${encodeURIComponent(company)}` : "/exhibitor-zone/mandatory-forms")
+          }
+        >
+          {records.length > 0 ? `Done — Back to ${profileId ? "Exhibitor Progress" : "Mandatory Forms"}` : "Add at least one badge to continue"}
         </button>
       </div>
 

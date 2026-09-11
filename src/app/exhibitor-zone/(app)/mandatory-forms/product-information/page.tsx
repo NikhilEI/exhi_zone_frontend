@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "../../../_lib/apiClient";
 import { useMandatoryFormGate } from "../../../_lib/useMandatoryFormGate";
+import { useAdminProfileParam, withProfileId } from "../../../_lib/adminProfile";
+import AdminEditingBanner from "../../../_components/AdminEditingBanner";
 
 interface Category {
   id: number;
@@ -21,6 +23,7 @@ interface Subcategory {
 export default function ProductInformationPage() {
   const router = useRouter();
   const gateOk = useMandatoryFormGate();
+  const { profileId, company } = useAdminProfileParam();
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -37,7 +40,7 @@ export default function ProductInformationPage() {
   useEffect(() => {
     Promise.all([
       api.get<{ categories: Category[]; subcategories: Subcategory[] }>("/mandatory-forms/product-categories"),
-      api.get<{ selections: { subcategory_id: number; other_specification: string | null }[] }>("/mandatory-forms/product-information")
+      api.get<{ selections: { subcategory_id: number; other_specification: string | null }[] }>(withProfileId("/mandatory-forms/product-information", profileId))
     ])
       .then(([ref, existing]) => {
         setCategories(ref.categories);
@@ -48,7 +51,7 @@ export default function ProductInformationPage() {
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : "Failed to load product categories."))
       .finally(() => setLoading(false));
-  }, []);
+  }, [profileId]);
 
   const subcategoriesByCategory = useMemo(() => {
     const map = new Map<number, Subcategory[]>();
@@ -105,7 +108,7 @@ export default function ProductInformationPage() {
 
     setSubmitting(true);
     try {
-      await api.patch("/mandatory-forms/product-information", {
+      await api.patch(withProfileId("/mandatory-forms/product-information", profileId), {
         subcategoryIds: Array.from(selected),
         otherSpecification: isOthersSelected ? otherText.trim() : undefined
       });
@@ -132,8 +135,12 @@ export default function ProductInformationPage() {
           <i className="bx bx-check-circle" style={{ fontSize: "3rem", color: "var(--ez-success)" }} />
           <h3 style={{ marginTop: "1rem", marginBottom: "0.5rem", color: "var(--ez-dark)" }}>Product Information saved</h3>
           <p className="text-muted text-small mb-4">This form is now marked as completed.</p>
-          <button type="button" className="btn btn-primary w-100" onClick={() => router.push("/exhibitor-zone/mandatory-forms")}>
-            Back to Mandatory Forms
+          <button
+            type="button"
+            className="btn btn-primary w-100"
+            onClick={() => router.push(profileId ? `/exhibitor-zone/admin/exhibitor-progress/${profileId}?company=${encodeURIComponent(company)}` : "/exhibitor-zone/mandatory-forms")}
+          >
+            {profileId ? "Back to Exhibitor Progress" : "Back to Mandatory Forms"}
           </button>
         </div>
       </div>
@@ -146,6 +153,8 @@ export default function ProductInformationPage() {
         <h1 className="content-title">Product Information</h1>
         <p className="content-subtitle">Please note: Last date of submission is 7th March 2027, post which no forms will be entertained.</p>
       </div>
+
+      {profileId && <AdminEditingBanner profileId={profileId} company={company} />}
 
       <div className="alert alert-info mb-3">
         <i className="bx bx-info-circle" />
