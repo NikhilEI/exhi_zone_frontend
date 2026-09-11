@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { api, ApiError } from "../../../_lib/apiClient";
 import { useAdminProfileParam, withProfileId } from "../../../_lib/adminProfile";
 import AdminEditingBanner from "../../../_components/AdminEditingBanner";
+import SupportContactBanner from "../../../_components/SupportContactBanner";
 import { countries, findCountry } from "@/data/countries";
 
 const HALL_OPTIONS = ["Hall 1", "Hall 2", "Hall 3", "Hall 4", "Hall 5"];
@@ -307,6 +308,8 @@ export default function ExhibitorInformationPage() {
         <h1 className="content-title">Exhibitor Information Form</h1>
         <p className="content-subtitle">Fill this form to proceed</p>
       </div>
+
+      <SupportContactBanner />
 
       {profileId && <AdminEditingBanner profileId={profileId} company={company} />}
 

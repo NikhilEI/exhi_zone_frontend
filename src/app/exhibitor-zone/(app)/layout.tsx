@@ -62,6 +62,7 @@ const ADMIN_NAV: NavItem[] = [
   { label: "Send Notification", href: "/exhibitor-zone/admin/notifications", icon: "bx-bell" },
   { label: "Reports" },
   { label: "Export Data", href: "/exhibitor-zone/admin/exports", icon: "bx-download" },
+  { label: "Generate Documents", href: "/exhibitor-zone/admin/document-generator", icon: "bx-file" },
   { label: "Legacy Import", href: "/exhibitor-zone/admin/legacy-import", icon: "bx-upload" },
   { label: "Admin" },
   { label: "Admin Users", href: "/exhibitor-zone/admin/users", icon: "bx-user-circle" }
@@ -90,7 +91,8 @@ const NAV_HREF_TO_MODULE: Record<string, string> = {
   "/exhibitor-zone/admin/forms": "forms",
   "/exhibitor-zone/admin/documents": "documents",
   "/exhibitor-zone/admin/notifications": "notifications",
-  "/exhibitor-zone/admin/exports": "exports"
+  "/exhibitor-zone/admin/exports": "exports",
+  "/exhibitor-zone/admin/document-generator": "document-generator"
 };
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

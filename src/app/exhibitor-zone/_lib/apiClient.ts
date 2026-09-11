@@ -51,6 +51,24 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   return body as T;
 }
 
+// Like api.post, but for endpoints that return a raw binary body (e.g. a
+// rendered PDF) instead of JSON — bypasses request()'s res.json() parsing
+// and the success/error toast, since a live preview call isn't a user
+// mutation worth toasting.
+async function postForBlob(path: string, data?: unknown): Promise<Blob> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data ?? {})
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new ApiError(body.message || "Something went wrong. Please try again.", res.status, body.errors);
+  }
+  return res.blob();
+}
+
 export const api = {
   get: <T>(path: string, opts?: RequestOptions) => request<T>(path, opts),
   post: <T>(path: string, data?: unknown, opts?: RequestOptions) =>
@@ -58,5 +76,6 @@ export const api = {
   patch: <T>(path: string, data?: unknown, opts?: RequestOptions) =>
     request<T>(path, { method: "PATCH", body: JSON.stringify(data ?? {}), ...opts }),
   delete: <T>(path: string, opts?: RequestOptions) => request<T>(path, { method: "DELETE", ...opts }),
-  fileUrl: (path: string) => `${API_BASE}${path}`
+  fileUrl: (path: string) => `${API_BASE}${path}`,
+  postForBlob
 };

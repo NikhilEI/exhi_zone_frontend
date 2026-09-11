@@ -6,6 +6,7 @@ import { api, ApiError } from "../../../_lib/apiClient";
 import { useMandatoryFormGate } from "../../../_lib/useMandatoryFormGate";
 import { useAdminProfileParam, withProfileId } from "../../../_lib/adminProfile";
 import AdminEditingBanner from "../../../_components/AdminEditingBanner";
+import SupportContactBanner from "../../../_components/SupportContactBanner";
 
 const GUIDELINE_LINK = "https://www.convergenceindia.org/exhibitor-zone/guidelines-for-sound-noise-level.aspx";
 
@@ -104,6 +105,8 @@ export default function SoundNoiseGuidelinesPage() {
         <h1 className="content-title">Sound &amp; Noise Level Guidelines</h1>
         <p className="content-subtitle">Please note: Last date of submission is 7th March 2027, post which no forms will be entertained.</p>
       </div>
+
+      <SupportContactBanner />
 
       {profileId && <AdminEditingBanner profileId={profileId} company={company} />}
 

@@ -1,10 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import { api, ApiError } from "../../../_lib/apiClient";
 import StatusBadge from "../../../_components/StatusBadge";
 import DataTable, { type DataTableColumn } from "../../../_components/DataTable";
+
+interface FormEntry {
+  formKey: string;
+  name: string;
+  status: string;
+  completedAt: string | null;
+}
 
 interface ExhibitorProgress {
   profileId: number;
@@ -15,6 +22,7 @@ interface ExhibitorProgress {
   inProgressForms: number;
   pendingForms: number;
   completionPct: number;
+  forms: FormEntry[];
 }
 
 interface FormStat {
@@ -53,10 +61,72 @@ function ProgressBar({ pct }: { pct: number }) {
   );
 }
 
+function ExhibitorLink({ e }: { e: ExhibitorProgress }) {
+  return (
+    <Link
+      href={`/exhibitor-zone/admin/exhibitor-progress/${e.profileId}?company=${encodeURIComponent(e.companyName)}`}
+      className="d-flex justify-between align-center text-small"
+      style={{ padding: "0.375rem 0", borderBottom: "1px solid var(--ez-divider, #eee)" }}
+    >
+      <span>{e.companyName}</span>
+      <i className="bx bx-chevron-right text-muted" />
+    </Link>
+  );
+}
+
+// The drill-down shown when a "Completion by Form" row is expanded — two
+// segregated lists (filled / not filled) for that one form, each exhibitor
+// linking straight to their own Exhibitor Progress detail page where the
+// admin can open and check (or edit) that exact form submission.
+function FormExhibitorBreakdown({ formKey, exhibitors }: { formKey: string; exhibitors: ExhibitorProgress[] }) {
+  const { filled, notFilled } = getFormBreakdown(exhibitors, formKey);
+  return (
+    <div className="grid grid-2" style={{ gap: "1.5rem" }}>
+      <div>
+        <div className="text-small fw-600 mb-2" style={{ color: "var(--ez-success)" }}>
+          <i className="bx bx-check-circle" /> Filled ({filled.length})
+        </div>
+        {filled.length === 0 ? (
+          <p className="text-xs text-muted">No exhibitor has filled this form yet.</p>
+        ) : (
+          filled.map((e) => <ExhibitorLink key={e.profileId} e={e} />)
+        )}
+      </div>
+      <div>
+        <div className="text-small fw-600 mb-2" style={{ color: "var(--ez-danger)" }}>
+          <i className="bx bx-x-circle" /> Not Filled ({notFilled.length})
+        </div>
+        {notFilled.length === 0 ? (
+          <p className="text-xs text-muted">Everyone this form applies to has filled it.</p>
+        ) : (
+          notFilled.map((e) => <ExhibitorLink key={e.profileId} e={e} />)
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Splits every exhibitor into "filled" vs "not filled" for one form key —
+// an exhibitor with no entry for this formKey simply doesn't have this form
+// apply to them (e.g. Shell Space exhibitors have no Booth Design Submission
+// row) and is excluded from both lists rather than counted as "not filled".
+function getFormBreakdown(exhibitors: ExhibitorProgress[], formKey: string) {
+  const filled: ExhibitorProgress[] = [];
+  const notFilled: ExhibitorProgress[] = [];
+  for (const e of exhibitors) {
+    const entry = e.forms.find((f) => f.formKey === formKey);
+    if (!entry) continue;
+    if (entry.status === "completed") filled.push(e);
+    else notFilled.push(e);
+  }
+  return { filled, notFilled };
+}
+
 export default function AdminExhibitorProgressPage() {
   const [data, setData] = useState<ProgressResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [expandedFormKey, setExpandedFormKey] = useState<string | null>(null);
 
   useEffect(() => {
     api
@@ -132,10 +202,14 @@ export default function AdminExhibitorProgressPage() {
             <div className="card-header">
               <span className="card-title">Completion by Form</span>
             </div>
+            <p className="text-xs text-muted" style={{ padding: "0 1.25rem", marginTop: "0.5rem", marginBottom: 0 }}>
+              Click a form to see which exhibitors have filled it and which haven&apos;t.
+            </p>
             <div className="table-wrapper">
               <table className="table">
                 <thead>
                   <tr>
+                    <th></th>
                     <th>Form</th>
                     <th>Applicable</th>
                     <th>Completed</th>
@@ -145,20 +219,35 @@ export default function AdminExhibitorProgressPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.formStats.map((f) => (
-                    <tr key={f.formKey}>
-                      <td className="text-small fw-600" style={{ color: "var(--ez-dark)" }}>
-                        {f.name}
-                      </td>
-                      <td className="text-small">{f.applicable}</td>
-                      <td className="text-small">{f.completed}</td>
-                      <td className="text-small">{f.inProgress}</td>
-                      <td className="text-small">{f.pending}</td>
-                      <td style={{ minWidth: 160 }}>
-                        <ProgressBar pct={f.applicable > 0 ? Math.round((f.completed / f.applicable) * 100) : 0} />
-                      </td>
-                    </tr>
-                  ))}
+                  {data.formStats.map((f) => {
+                    const expanded = expandedFormKey === f.formKey;
+                    return (
+                      <Fragment key={f.formKey}>
+                        <tr style={{ cursor: "pointer" }} onClick={() => setExpandedFormKey(expanded ? null : f.formKey)}>
+                          <td style={{ width: 24 }}>
+                            <i className={`bx ${expanded ? "bx-chevron-down" : "bx-chevron-right"}`} />
+                          </td>
+                          <td className="text-small fw-600" style={{ color: "var(--ez-dark)" }}>
+                            {f.name}
+                          </td>
+                          <td className="text-small">{f.applicable}</td>
+                          <td className="text-small">{f.completed}</td>
+                          <td className="text-small">{f.inProgress}</td>
+                          <td className="text-small">{f.pending}</td>
+                          <td style={{ minWidth: 160 }}>
+                            <ProgressBar pct={f.applicable > 0 ? Math.round((f.completed / f.applicable) * 100) : 0} />
+                          </td>
+                        </tr>
+                        {expanded && (
+                          <tr>
+                            <td colSpan={7} style={{ background: "var(--ez-light, #f8f9fb)", padding: "1rem 1.25rem" }}>
+                              <FormExhibitorBreakdown formKey={f.formKey} exhibitors={data.exhibitors} />
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

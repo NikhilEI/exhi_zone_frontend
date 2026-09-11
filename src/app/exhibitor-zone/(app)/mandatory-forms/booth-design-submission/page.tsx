@@ -6,6 +6,7 @@ import { api, ApiError } from "../../../_lib/apiClient";
 import { useMandatoryFormGate } from "../../../_lib/useMandatoryFormGate";
 import { useAdminProfileParam, withProfileId } from "../../../_lib/adminProfile";
 import AdminEditingBanner from "../../../_components/AdminEditingBanner";
+import SupportContactBanner from "../../../_components/SupportContactBanner";
 import { formatDate } from "../../../_lib/format";
 import StatusBadge from "../../../_components/StatusBadge";
 
@@ -240,6 +241,8 @@ export default function BoothDesignSubmissionPage() {
         <h1 className="content-title">Booth Design Submission</h1>
         <p className="content-subtitle">It is mandatory for all raw space exhibitors to submit the booth design for approval by 7th March 2027.</p>
       </div>
+
+      <SupportContactBanner />
 
       {profileId && <AdminEditingBanner profileId={profileId} company={company} />}
 

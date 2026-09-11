@@ -6,6 +6,7 @@ import { api, ApiError } from "../../../_lib/apiClient";
 import { useMandatoryFormGate } from "../../../_lib/useMandatoryFormGate";
 import { useAdminProfileParam, withProfileId } from "../../../_lib/adminProfile";
 import AdminEditingBanner from "../../../_components/AdminEditingBanner";
+import SupportContactBanner from "../../../_components/SupportContactBanner";
 import { formatDate } from "../../../_lib/format";
 import StatusBadge from "../../../_components/StatusBadge";
 
@@ -113,6 +114,8 @@ export default function FasciaNameSubmissionPage() {
         <h1 className="content-title">Fascia Name Submission</h1>
         <p className="content-subtitle">Please note: Last date of submission is 7th March 2027, post which no forms will be entertained.</p>
       </div>
+
+      <SupportContactBanner />
 
       {profileId && <AdminEditingBanner profileId={profileId} company={company} />}
 
