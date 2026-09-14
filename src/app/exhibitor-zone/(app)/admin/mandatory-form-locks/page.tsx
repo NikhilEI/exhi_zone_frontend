@@ -142,12 +142,31 @@ export default function MandatoryFormLocksPage() {
     setExhibitorLocked((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
   }
 
+  function selectAllGlobal() {
+    setGlobalLocked(fields.map((f) => f.key));
+  }
+
+  function clearAllGlobal() {
+    setGlobalLocked([]);
+  }
+
+  // Fields already locked globally have no checkbox in exhibitor mode (see
+  // "Locked globally" badge below) — Select All only applies to the fields
+  // that are actually toggleable here.
+  function selectAllExhibitor() {
+    setExhibitorLocked(fields.filter((f) => !globalLockedForExhibitor.includes(f.key)).map((f) => f.key));
+  }
+
+  function clearAllExhibitor() {
+    setExhibitorLocked([]);
+  }
+
   async function saveGlobal() {
     setSaving(true);
     setError("");
     setMessage("");
     try {
-      await api.put(`/admin/mandatory-form-locks/global`, { formKey, lockedFieldKeys: globalLocked }, { silent: true });
+      await api.put(`/admin/mandatory-form-locks/global`, { formKey, lockedFieldKeys: globalLocked });
       setMessage("Global lock settings saved.");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to save global locks.");
@@ -162,7 +181,7 @@ export default function MandatoryFormLocksPage() {
     setError("");
     setMessage("");
     try {
-      await api.put(`/admin/mandatory-form-locks/${selectedProfile.id}`, { formKey, lockedFieldKeys: exhibitorLocked }, { silent: true });
+      await api.put(`/admin/mandatory-form-locks/${selectedProfile.id}`, { formKey, lockedFieldKeys: exhibitorLocked });
       setMessage(`Lock settings saved for ${selectedProfile.display_name}.`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to save locks.");
@@ -223,9 +242,19 @@ export default function MandatoryFormLocksPage() {
               <div className="spinner" />
             ) : (
               <>
-                <p className="text-small text-muted mb-3">
-                  Checked fields are locked for <strong>every exhibitor</strong> on this form, immediately.
-                </p>
+                <div className="d-flex justify-between align-center mb-3" style={{ flexWrap: "wrap", gap: "0.75rem" }}>
+                  <p className="text-small text-muted mb-0">
+                    Checked fields are locked for <strong>every exhibitor</strong> on this form, immediately.
+                  </p>
+                  <div className="d-flex gap-2">
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={selectAllGlobal} disabled={fields.length === 0}>
+                      Select All
+                    </button>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={clearAllGlobal} disabled={globalLocked.length === 0}>
+                      Clear All
+                    </button>
+                  </div>
+                </div>
                 <div className="grid grid-2" style={{ gap: "0.75rem" }}>
                   {fields.map((f) => (
                     <label key={f.key} className="d-flex align-center gap-2 text-small" style={{ fontWeight: 400, cursor: "pointer" }}>
@@ -275,6 +304,14 @@ export default function MandatoryFormLocksPage() {
               <div className="spinner" />
             ) : (
               <>
+                <div className="d-flex justify-end gap-2 mb-2">
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={selectAllExhibitor} disabled={fields.every((f) => globalLockedForExhibitor.includes(f.key))}>
+                    Select All
+                  </button>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={clearAllExhibitor} disabled={exhibitorLocked.length === 0}>
+                    Clear All
+                  </button>
+                </div>
                 <div className="table-wrapper">
                   <table className="table">
                     <thead>

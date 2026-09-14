@@ -47,6 +47,19 @@ export default function AdminOrdersPage() {
     }
   }
 
+  async function cancelOrder(o: Order) {
+    if (!confirm(`Cancel order ${o.order_number}? This releases its reserved/sold stock back to available inventory.`)) return;
+    setMessage("");
+    setError("");
+    try {
+      await api.post(`/orders/${o.id}/cancel`, {});
+      setMessage(`Order ${o.order_number} cancelled.`);
+      load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to cancel order.");
+    }
+  }
+
   const columns: DataTableColumn<Order>[] = [
     {
       key: "order_number",
@@ -81,13 +94,23 @@ export default function AdminOrdersPage() {
         loading={loading}
         searchPlaceholder="Search orders…"
         emptyMessage="No orders yet."
-        actions={(o) =>
-          o.payment_status !== "paid" ? (
-            <button type="button" className="btn btn-sm btn-success" onClick={() => markPaid(o.id)}>
-              Mark Paid
-            </button>
-          ) : null
-        }
+        actions={(o) => {
+          const cancellable = !["cancelled", "fulfilled", "refunded"].includes(o.status);
+          return (
+            <div className="d-flex gap-2">
+              {o.payment_status !== "paid" && cancellable && (
+                <button type="button" className="btn btn-sm btn-success" onClick={() => markPaid(o.id)}>
+                  Mark Paid
+                </button>
+              )}
+              {cancellable && (
+                <button type="button" className="btn btn-sm btn-ghost" style={{ color: "var(--ez-danger)" }} onClick={() => cancelOrder(o)}>
+                  Cancel
+                </button>
+              )}
+            </div>
+          );
+        }}
       />
     </>
   );

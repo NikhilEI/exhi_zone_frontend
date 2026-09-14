@@ -19,6 +19,10 @@ interface Item {
   price_inr: string;
   price_usd: string | null;
   is_active: number;
+  inventory_total: number | null;
+  inventory_reserved: number;
+  inventory_sold: number;
+  inventory_available: number;
 }
 
 export default function AdminCataloguePage() {
@@ -28,7 +32,11 @@ export default function AdminCataloguePage() {
   const [message, setMessage] = useState("");
 
   const [newCategory, setNewCategory] = useState({ name: "", slug: "" });
-  const [newItem, setNewItem] = useState({ categoryId: "", sku: "", name: "", priceInr: "", priceUsd: "", unit: "each" });
+  const [newItem, setNewItem] = useState({ categoryId: "", sku: "", name: "", priceInr: "", priceUsd: "", unit: "each", inventoryTotal: "" });
+
+  const [editingStockId, setEditingStockId] = useState<number | null>(null);
+  const [editingStockValue, setEditingStockValue] = useState("");
+  const [savingStock, setSavingStock] = useState(false);
 
   function load() {
     api.get<{ categories: Category[] }>("/catalogue/categories").then((b) => setCategories(b.categories)).catch(() => {});
@@ -58,8 +66,12 @@ export default function AdminCataloguePage() {
       return;
     }
     try {
-      await api.post("/catalogue/items", { ...newItem, categoryId: Number(newItem.categoryId) });
-      setNewItem({ categoryId: "", sku: "", name: "", priceInr: "", priceUsd: "", unit: "each" });
+      await api.post("/catalogue/items", {
+        ...newItem,
+        categoryId: Number(newItem.categoryId),
+        inventoryTotal: newItem.inventoryTotal === "" ? undefined : Number(newItem.inventoryTotal)
+      });
+      setNewItem({ categoryId: "", sku: "", name: "", priceInr: "", priceUsd: "", unit: "each", inventoryTotal: "" });
       setMessage("Item created.");
       load();
     } catch (err) {
@@ -73,6 +85,31 @@ export default function AdminCataloguePage() {
       load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to update item.");
+    }
+  }
+
+  function startEditStock(item: Item) {
+    setEditingStockId(item.id);
+    setEditingStockValue(item.inventory_total === null ? "" : String(item.inventory_total));
+  }
+
+  function cancelEditStock() {
+    setEditingStockId(null);
+    setEditingStockValue("");
+  }
+
+  async function saveStock(item: Item) {
+    setSavingStock(true);
+    setError("");
+    try {
+      await api.patch(`/catalogue/items/${item.id}`, { inventoryTotal: editingStockValue === "" ? null : Number(editingStockValue) });
+      setMessage(`Stock updated for ${item.name}.`);
+      cancelEditStock();
+      load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to update stock.");
+    } finally {
+      setSavingStock(false);
     }
   }
 
@@ -92,6 +129,42 @@ export default function AdminCataloguePage() {
       )
     },
     {
+      key: "inventory_total",
+      label: "Stock",
+      render: (i) =>
+        editingStockId === i.id ? (
+          <div className="d-flex align-center gap-2">
+            <input
+              type="number"
+              min={0}
+              className="form-control form-control-sm"
+              style={{ width: 90 }}
+              value={editingStockValue}
+              placeholder="Unlimited"
+              onChange={(e) => setEditingStockValue(e.target.value)}
+              autoFocus
+            />
+            <button type="button" className="btn btn-sm btn-primary" onClick={() => saveStock(i)} disabled={savingStock}>
+              {savingStock ? "…" : "Save"}
+            </button>
+            <button type="button" className="btn btn-sm btn-ghost" onClick={cancelEditStock} disabled={savingStock}>
+              Cancel
+            </button>
+          </div>
+        ) : i.inventory_total === null ? (
+          <span className="text-small text-muted">Unlimited</span>
+        ) : (
+          <div>
+            <span className={`text-small fw-600 ${i.inventory_available <= 0 ? "text-danger" : ""}`} style={i.inventory_available <= 0 ? { color: "var(--ez-danger)" } : undefined}>
+              {i.inventory_available} available
+            </span>
+            <div className="text-xs text-muted">
+              Total {i.inventory_total} · Reserved {i.inventory_reserved} · Sold {i.inventory_sold}
+            </div>
+          </div>
+        )
+    },
+    {
       key: "is_active",
       label: "Active",
       render: (i) => (i.is_active ? <span className="badge badge-success">Active</span> : <span className="badge badge-secondary">Inactive</span>)
@@ -102,7 +175,7 @@ export default function AdminCataloguePage() {
     <>
       <div className="content-header">
         <h1 className="content-title">Catalogue</h1>
-        <p className="content-subtitle">Manage service categories and orderable items for exhibitors</p>
+        <p className="content-subtitle">Manage service categories, orderable items, and stock levels for exhibitors</p>
       </div>
 
       {message && <div className="alert alert-success mb-3">{message}</div>}
@@ -168,6 +241,17 @@ export default function AdminCataloguePage() {
                   <label className="form-label">Unit</label>
                   <input className="form-control" value={newItem.unit} onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })} />
                 </div>
+                <div className="form-group">
+                  <label className="form-label">Total Stock</label>
+                  <input
+                    type="number"
+                    min={0}
+                    className="form-control"
+                    value={newItem.inventoryTotal}
+                    onChange={(e) => setNewItem({ ...newItem, inventoryTotal: e.target.value })}
+                    placeholder="Leave blank for unlimited"
+                  />
+                </div>
               </div>
               <button type="submit" className="btn btn-primary">
                 Add Item
@@ -184,9 +268,16 @@ export default function AdminCataloguePage() {
         searchPlaceholder="Search items…"
         emptyMessage="No catalogue items yet."
         actions={(item) => (
-          <button type="button" className="btn btn-sm btn-ghost" onClick={() => toggleActive(item)}>
-            {item.is_active ? "Deactivate" : "Activate"}
-          </button>
+          <div className="d-flex gap-2">
+            {editingStockId !== item.id && (
+              <button type="button" className="btn btn-sm btn-ghost" onClick={() => startEditStock(item)}>
+                Edit Stock
+              </button>
+            )}
+            <button type="button" className="btn btn-sm btn-ghost" onClick={() => toggleActive(item)}>
+              {item.is_active ? "Deactivate" : "Activate"}
+            </button>
+          </div>
         )}
       />
     </>
