@@ -14,6 +14,7 @@ interface Profile {
   display_name: string;
   company_email: string;
   profile_status: string;
+  sales_user_name: string | null;
   created_at: string;
 }
 
@@ -65,6 +66,7 @@ function CompaniesList() {
     },
     { key: "company_email", label: "Email" },
     { key: "profile_status", label: "Status", render: (p) => <StatusBadge status={p.profile_status} /> },
+    { key: "sales_user_name", label: "Salesman", render: (p) => p.sales_user_name || <span className="text-muted">Unassigned</span> },
     { key: "created_at", label: "Registered", render: (p) => formatDate(p.created_at) }
   ];
 

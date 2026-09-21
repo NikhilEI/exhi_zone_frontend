@@ -69,7 +69,6 @@ export default function BoothDesignSubmissionPage() {
   const router = useRouter();
   const gateOk = useMandatoryFormGate();
   const { profileId, company } = useAdminProfileParam();
-  const [eligible, setEligible] = useState<boolean | null>(profileId ? true : null);
   const [existing, setExisting] = useState<Submission | null>(null);
   const [form, setForm] = useState<FormState>(initialForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -90,17 +89,6 @@ export default function BoothDesignSubmissionPage() {
   const isLocked = makeIsLocked(profileId, lockedFields);
 
   useEffect(() => {
-    // Admin editing on behalf of an exhibitor bypasses the Raw-Space-only
-    // eligibility check (already reflected in the initial useState above) —
-    // they may be filling this in before booth_type is even set, or fixing
-    // a misclassification.
-    if (!profileId) {
-      api
-        .get<{ info: { booth_type: string } | null }>("/mandatory-forms/exhibitor-information")
-        .then((body) => setEligible(body.info?.booth_type === "Raw Space"))
-        .catch(() => setEligible(false));
-    }
-
     api
       .get<{ submissions: Submission[] }>(withProfileId("/forms/submissions", profileId))
       .then((body) => {
@@ -218,25 +206,10 @@ export default function BoothDesignSubmissionPage() {
     }
   }
 
-  if (loading || eligible === null || !gateOk) {
+  if (loading || !gateOk) {
     return (
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}>
         <div className="spinner" />
-      </div>
-    );
-  }
-
-  if (!eligible) {
-    return (
-      <div className="card text-center" style={{ maxWidth: 480, margin: "3rem auto", padding: "1rem" }}>
-        <div className="card-body" style={{ padding: "2.5rem 1.5rem" }}>
-          <i className="bx bx-info-circle" style={{ fontSize: "3rem", color: "var(--ez-muted)" }} />
-          <h3 style={{ marginTop: "1rem", marginBottom: "0.5rem", color: "var(--ez-dark)" }}>Not required</h3>
-          <p className="text-muted text-small mb-4">This form is only required for Raw Space exhibitors.</p>
-          <button type="button" className="btn btn-primary w-100" onClick={() => router.push("/exhibitor-zone/mandatory-forms")}>
-            Back to Mandatory Forms
-          </button>
-        </div>
       </div>
     );
   }

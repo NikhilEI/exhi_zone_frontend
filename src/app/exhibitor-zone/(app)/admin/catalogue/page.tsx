@@ -174,7 +174,7 @@ export default function AdminCataloguePage() {
   return (
     <>
       <div className="content-header">
-        <h1 className="content-title">Catalogue</h1>
+        <h1 className="content-title">Furniture Catalogue</h1>
         <p className="content-subtitle">Manage service categories, orderable items, and stock levels for exhibitors</p>
       </div>
 

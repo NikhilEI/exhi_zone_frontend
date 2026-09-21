@@ -16,6 +16,27 @@ export default function AdminExportsPage() {
   const [exportDefs, setExportDefs] = useState<ExportDef[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selected, setSelected] = useState<ExportDef | null>(null);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+
+  const rangeInvalid = Boolean(from && to && from > to);
+
+  function openDialog(def: ExportDef) {
+    setFrom("");
+    setTo("");
+    setSelected(def);
+  }
+
+  function download() {
+    if (!selected || rangeInvalid) return;
+    const qs = new URLSearchParams();
+    if (from) qs.set("from", from);
+    if (to) qs.set("to", to);
+    const query = qs.toString();
+    window.open(api.fileUrl(`/admin/exports/${selected.key}${query ? `?${query}` : ""}`), "_blank", "noopener");
+    setSelected(null);
+  }
 
   useEffect(() => {
     api
@@ -64,13 +85,49 @@ export default function AdminExportsPage() {
               <p className="text-small text-muted mb-3" style={{ flex: 1 }}>
                 {e.description}
               </p>
-              <a href={api.fileUrl(`/admin/exports/${e.key}`)} target="_blank" rel="noreferrer" className="btn btn-primary btn-sm w-100">
+              <button type="button" className="btn btn-primary btn-sm w-100" onClick={() => openDialog(e)}>
                 <i className="bx bx-download" /> Download CSV
-              </a>
+              </button>
             </div>
           ))}
 
           {exportDefs.length === 0 && !error && <p className="text-muted text-small">No export types are available.</p>}
+        </div>
+      )}
+
+      {selected && (
+        <div className="ez-modal-overlay" onClick={() => setSelected(null)}>
+          <div className="ez-modal" style={{ maxWidth: 440 }} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <div className="ez-modal-header">
+              <span className="ez-modal-title">Export {selected.label}</span>
+            </div>
+            <div className="ez-modal-body">
+              <p className="text-small text-muted mb-3">Choose a date range for the data to export, or leave both blank to export everything.</p>
+              <div className="d-flex gap-2" style={{ flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: 150 }}>
+                  <label className="form-label" htmlFor="export-from">
+                    From date
+                  </label>
+                  <input id="export-from" type="date" className="form-control" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} />
+                </div>
+                <div style={{ flex: 1, minWidth: 150 }}>
+                  <label className="form-label" htmlFor="export-to">
+                    To date
+                  </label>
+                  <input id="export-to" type="date" className="form-control" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} />
+                </div>
+              </div>
+              {rangeInvalid && <div className="alert alert-danger mt-3 mb-0">The From date must not be after the To date.</div>}
+            </div>
+            <div className="ez-modal-footer">
+              <button type="button" className="btn btn-sm" onClick={() => setSelected(null)}>
+                Cancel
+              </button>
+              <button type="button" className="btn btn-primary btn-sm" onClick={download} disabled={rangeInvalid}>
+                <i className="bx bx-download" /> Download
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </>

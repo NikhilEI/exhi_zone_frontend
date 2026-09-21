@@ -31,12 +31,6 @@ const STATUS_ICON: Record<MandatoryForm["status"], string> = {
   completed: "bx-check-circle"
 };
 
-// Booth Design Submission and Fascia Name Submission are mutually exclusive —
-// which one applies depends on booth_type (Raw Space vs Shell Space). Once
-// booth_type is known, exactly one of the two should show, exactly like the
-// exhibitor's own Mandatory Forms list.
-const BOOTH_TYPE_PAIR = ["booth-design-submission", "fascia-name-submission"];
-
 export default function AdminExhibitorProgressDetailPage({ params }: { params: Promise<{ profileId: string }> }) {
   const { profileId } = use(params);
   const companyName = useSearchParams().get("company") || "";
@@ -46,8 +40,7 @@ export default function AdminExhibitorProgressDetailPage({ params }: { params: P
 
   useEffect(() => {
     // /status/:profileId only returns forms currently applicable to this
-    // exhibitor (e.g. Booth Design only shows once booth_type is known to be
-    // Raw Space) — merged here with the full definition list so an admin can
+    // exhibitor — merged here with the full definition list so an admin can
     // still open and fill in a form that isn't "applicable" yet, rather than
     // being blocked from ever setting it up in the first place.
     Promise.all([
@@ -58,15 +51,6 @@ export default function AdminExhibitorProgressDetailPage({ params }: { params: P
         const byKey = new Map(statusBody.forms.map((f) => [f.form_key, f]));
         const merged: MandatoryForm[] = defsBody.definitions
           .filter((d) => d.is_active)
-          .filter((d) => {
-            // Booth type is known (one of the pair is already applicable) —
-            // drop the other one entirely instead of showing both.
-            if (BOOTH_TYPE_PAIR.includes(d.form_key) && !byKey.has(d.form_key)) {
-              const counterpart = BOOTH_TYPE_PAIR.find((k) => k !== d.form_key);
-              if (counterpart && byKey.has(counterpart)) return false;
-            }
-            return true;
-          })
           .map((d) => {
             const known = byKey.get(d.form_key);
             return known

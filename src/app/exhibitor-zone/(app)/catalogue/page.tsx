@@ -60,7 +60,7 @@ export default function CataloguePage() {
   return (
     <>
       <div className="content-header">
-        <h1 className="content-title">Service Catalogue</h1>
+        <h1 className="content-title">Furniture Catalogue</h1>
         <p className="content-subtitle">Browse and order additional fittings, utilities, and services for your booth</p>
       </div>
 

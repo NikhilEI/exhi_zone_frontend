@@ -14,22 +14,23 @@ const EXHIBITOR_NAV: NavItem[] = [
   { label: "Notifications", href: "/exhibitor-zone/notifications", icon: "bx-bell" },
   { label: "Mandatory Forms" },
   { label: "Mandatory Forms", href: "/exhibitor-zone/mandatory-forms", icon: "bx-list-check" },
-  { label: "Event Services" },
-  { label: "Service Catalogue", href: "/exhibitor-zone/catalogue", icon: "bx-store" },
-  { label: "My Cart", href: "/exhibitor-zone/cart", icon: "bx-cart", badge: 0 },
-  { label: "Orders & Invoices", href: "/exhibitor-zone/orders", icon: "bx-receipt" },
-  { label: "Payment History", href: "/exhibitor-zone/payments", icon: "bx-credit-card" },
   { label: "Additional Requirements" },
   { label: "Translators", href: "/exhibitor-zone/services/translators", icon: "bx-conversation" },
   { label: "Security Personnel", href: "/exhibitor-zone/services/security-personnel", icon: "bx-shield" },
   { label: "Additional Power Supply", href: "/exhibitor-zone/services/additional-power-supply", icon: "bx-bolt-circle" },
   { label: "Outdoor Space", href: "/exhibitor-zone/services/outdoor-space", icon: "bx-move" },
   { label: "Internet Connectivity", href: "/exhibitor-zone/services/internet-connectivity", icon: "bx-wifi" },
+  { label: "Event Services" },
+  { label: "Furniture Catalogue", href: "/exhibitor-zone/catalogue", icon: "bx-store" },
+  { label: "My Cart", href: "/exhibitor-zone/cart", icon: "bx-cart", badge: 0 },
+  { label: "Orders & Invoices", href: "/exhibitor-zone/orders", icon: "bx-receipt" },
+  { label: "Payment History", href: "/exhibitor-zone/payments", icon: "bx-credit-card" },
   { label: "Compliance" },
-  { label: "Forms", href: "/exhibitor-zone/forms", icon: "bx-list-check" },
+  // { label: "Forms", href: "/exhibitor-zone/forms", icon: "bx-list-check" }, // hidden for now, not needed
   { label: "Documents", href: "/exhibitor-zone/documents", icon: "bx-folder" },
   { label: "Access" },
-  { label: "My Passes", href: "/exhibitor-zone/passes", icon: "bx-id-card" },
+  // { label: "My Passes", href: "/exhibitor-zone/passes", icon: "bx-id-card" }, // replaced by Coupon Codes
+  { label: "Coupon Codes", href: "/exhibitor-zone/coupons", icon: "bx-purchase-tag" },
   { label: "Information List" },
   { label: "Site Plan", href: "/exhibitor-zone/info/site-plan", icon: "bx-map-alt" },
   { label: "Empanelled Contractors", href: "https://www.convergenceindia.org/empanelled-contractors.aspx", icon: "bx-hammer" },
@@ -48,12 +49,13 @@ const ADMIN_NAV: NavItem[] = [
   { label: "Exhibitor Progress", href: "/exhibitor-zone/admin/exhibitor-progress", icon: "bx-line-chart" },
   { label: "Stall Grid", href: "/exhibitor-zone/admin/stalls", icon: "bx-grid-alt" },
   { label: "Commerce" },
-  { label: "Service Catalogue", href: "/exhibitor-zone/admin/catalogue", icon: "bx-store" },
+  { label: "Furniture Catalogue", href: "/exhibitor-zone/admin/catalogue", icon: "bx-store" },
   { label: "Carts", href: "/exhibitor-zone/admin/carts", icon: "bx-cart" },
   { label: "Orders & Invoices", href: "/exhibitor-zone/admin/orders", icon: "bx-receipt" },
   { label: "Payments", href: "/exhibitor-zone/admin/payments", icon: "bx-credit-card" },
   { label: "Access & Compliance" },
   { label: "Pass Management", href: "/exhibitor-zone/admin/passes", icon: "bx-id-card" },
+  { label: "Coupon Codes", href: "/exhibitor-zone/admin/coupons", icon: "bx-purchase-tag" },
   { label: "Mandatory Forms", href: "/exhibitor-zone/admin/mandatory-forms", icon: "bx-list-check" },
   { label: "Mandatory Form Field Locks", href: "/exhibitor-zone/admin/mandatory-form-locks", icon: "bx-lock-alt" },
   { label: "Additional Requirements", href: "/exhibitor-zone/admin/services", icon: "bx-toggle-left" },
@@ -66,7 +68,8 @@ const ADMIN_NAV: NavItem[] = [
   { label: "Generate Documents", href: "/exhibitor-zone/admin/document-generator", icon: "bx-file" },
   { label: "Legacy Import", href: "/exhibitor-zone/admin/legacy-import", icon: "bx-upload" },
   { label: "Admin" },
-  { label: "Admin Users", href: "/exhibitor-zone/admin/users", icon: "bx-user-circle" }
+  { label: "Admin Users", href: "/exhibitor-zone/admin/users", icon: "bx-user-circle" },
+  { label: "Sales Assignments", href: "/exhibitor-zone/admin/sales-assignments", icon: "bx-user-check" }
 ];
 
 // Maps each admin nav href to the module key it's gated by on the backend
@@ -87,6 +90,7 @@ const NAV_HREF_TO_MODULE: Record<string, string> = {
   "/exhibitor-zone/admin/orders": "orders",
   "/exhibitor-zone/admin/payments": "payments",
   "/exhibitor-zone/admin/passes": "passes",
+  "/exhibitor-zone/admin/coupons": "coupons",
   "/exhibitor-zone/admin/mandatory-forms": "mandatory-forms",
   "/exhibitor-zone/admin/mandatory-form-locks": "mandatory-form-locks",
   "/exhibitor-zone/admin/services": "services",
@@ -152,6 +156,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       // organiser/finance admins rather than showing a link that 403s.
       if (item.href === "/exhibitor-zone/admin/legacy-import" && user.role !== "super_admin") return false;
       if (item.href === "/exhibitor-zone/admin/users" && user.role !== "super_admin") return false;
+      // Assigning exhibitors to salesmen is organiser-level (backend: super_admin/organiser only).
+      if (item.href === "/exhibitor-zone/admin/sales-assignments" && !["super_admin", "organiser"].includes(user.role)) return false;
       // Operations/sales only see the admin modules their account was
       // granted — everyone else (super_admin/organiser/finance) sees every item.
       if (admin && isModuleGated(user.role) && item.href) {

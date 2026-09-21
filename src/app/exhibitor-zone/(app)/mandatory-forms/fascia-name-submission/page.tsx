@@ -30,7 +30,6 @@ export default function FasciaNameSubmissionPage() {
   const router = useRouter();
   const gateOk = useMandatoryFormGate();
   const { profileId, company } = useAdminProfileParam();
-  const [eligible, setEligible] = useState<boolean | null>(profileId ? true : null);
   const [existing, setExisting] = useState<Submission | null>(null);
   const [fasciaName, setFasciaName] = useState("");
   const [error, setError] = useState("");
@@ -43,16 +42,6 @@ export default function FasciaNameSubmissionPage() {
   const fieldLocked = isLocked("fasciaName");
 
   useEffect(() => {
-    // Admin editing on behalf of an exhibitor bypasses the Shell-Space-only
-    // eligibility check (already reflected in the initial useState above) —
-    // see booth-design-submission for the same reasoning.
-    if (!profileId) {
-      api
-        .get<{ info: { booth_type: string } | null }>("/mandatory-forms/exhibitor-information")
-        .then((body) => setEligible(body.info?.booth_type === "Shell Space"))
-        .catch(() => setEligible(false));
-    }
-
     api
       .get<{ submissions: Submission[] }>(withProfileId("/forms/submissions", profileId))
       .then((body) => {
@@ -92,25 +81,10 @@ export default function FasciaNameSubmissionPage() {
     }
   }
 
-  if (loading || eligible === null || !gateOk) {
+  if (loading || !gateOk) {
     return (
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}>
         <div className="spinner" />
-      </div>
-    );
-  }
-
-  if (!eligible) {
-    return (
-      <div className="card text-center" style={{ maxWidth: 480, margin: "3rem auto", padding: "1rem" }}>
-        <div className="card-body" style={{ padding: "2.5rem 1.5rem" }}>
-          <i className="bx bx-info-circle" style={{ fontSize: "3rem", color: "var(--ez-muted)" }} />
-          <h3 style={{ marginTop: "1rem", marginBottom: "0.5rem", color: "var(--ez-dark)" }}>Not required</h3>
-          <p className="text-muted text-small mb-4">This form is only applicable for Shell Scheme booths. Raw Space exhibitors can skip the Fascia Name.</p>
-          <button type="button" className="btn btn-primary w-100" onClick={() => router.push("/exhibitor-zone/mandatory-forms")}>
-            Back to Mandatory Forms
-          </button>
-        </div>
       </div>
     );
   }

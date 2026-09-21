@@ -38,8 +38,8 @@ interface MandatoryForm {
 
 const QUICK_ACTIONS = [
   { href: "/exhibitor-zone/catalogue", icon: "bx-store", label: "Order Services", sub: "Browse equipment & fittings", bg: "var(--ez-primary-light)" },
-  { href: "/exhibitor-zone/forms", icon: "bx-list-check", label: "Mandatory Forms", sub: "Compliance profiles & declarations", bg: "#e4f9d6" },
-  { href: "/exhibitor-zone/passes", icon: "bx-id-card", label: "Badge Registry", sub: "Submit staff names & designations", bg: "#d0f6fd" },
+  { href: "/exhibitor-zone/mandatory-forms", icon: "bx-list-check", label: "Mandatory Forms", sub: "Compliance profiles & declarations", bg: "#e4f9d6" },
+  { href: "/exhibitor-zone/coupons", icon: "bx-purchase-tag", label: "Coupon Codes", sub: "Generate QR coupons for your guests", bg: "#d0f6fd" },
   { href: "/exhibitor-zone/profile", icon: "bx-grid-alt", label: "Stall Allocation", sub: "View allocated booth scheme", bg: "#fff3cd" }
 ] as const;
 
