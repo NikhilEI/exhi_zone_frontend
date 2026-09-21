@@ -46,6 +46,7 @@ const ADMIN_NAV: NavItem[] = [
   { label: "Exhibitor Management" },
   { label: "Registrations", href: "/exhibitor-zone/admin/registrations", icon: "bx-user-plus" },
   { label: "Exhibitor CRM", href: "/exhibitor-zone/admin/companies", icon: "bx-buildings" },
+  { label: "Assign to Sales", href: "/exhibitor-zone/admin/exhibitor-assignments", icon: "bx-user-check" },
   { label: "Exhibitor Progress", href: "/exhibitor-zone/admin/exhibitor-progress", icon: "bx-line-chart" },
   { label: "Stall Grid", href: "/exhibitor-zone/admin/stalls", icon: "bx-grid-alt" },
   { label: "Commerce" },
@@ -69,7 +70,7 @@ const ADMIN_NAV: NavItem[] = [
   { label: "Legacy Import", href: "/exhibitor-zone/admin/legacy-import", icon: "bx-upload" },
   { label: "Admin" },
   { label: "Admin Users", href: "/exhibitor-zone/admin/users", icon: "bx-user-circle" },
-  { label: "Sales Assignments", href: "/exhibitor-zone/admin/sales-assignments", icon: "bx-user-check" }
+  { label: "Sales Assignment Import", href: "/exhibitor-zone/admin/sales-assignments", icon: "bx-upload" }
 ];
 
 // Maps each admin nav href to the module key it's gated by on the backend
@@ -84,6 +85,7 @@ const NAV_HREF_TO_MODULE: Record<string, string> = {
   "/exhibitor-zone/admin/registrations": "registrations",
   "/exhibitor-zone/admin/companies": "companies",
   "/exhibitor-zone/admin/exhibitor-progress": "exhibitor-progress",
+  "/exhibitor-zone/admin/exhibitor-assignments": "exhibitor-assignments",
   "/exhibitor-zone/admin/stalls": "stalls",
   "/exhibitor-zone/admin/catalogue": "catalogue",
   "/exhibitor-zone/admin/carts": "carts",
@@ -157,6 +159,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       if (item.href === "/exhibitor-zone/admin/legacy-import" && user.role !== "super_admin") return false;
       if (item.href === "/exhibitor-zone/admin/users" && user.role !== "super_admin") return false;
       // Assigning exhibitors to salesmen is organiser-level (backend: super_admin/organiser only).
+      if (item.href === "/exhibitor-zone/admin/exhibitor-assignments" && !["super_admin", "organiser", "operations"].includes(user.role)) return false;
       if (item.href === "/exhibitor-zone/admin/sales-assignments" && !["super_admin", "organiser"].includes(user.role)) return false;
       // Operations/sales only see the admin modules their account was
       // granted — everyone else (super_admin/organiser/finance) sees every item.
